@@ -81,13 +81,16 @@
         <i class="fa-solid fa-map-location-dot text-2xl"></i>
         <h1 class="text-xl font-bold">دليل المحاضرات والجوامع</h1>
       </div>
-      <button
-        id="toggle-view-btn"
-        class="flex items-center gap-2 bg-emerald-800 hover:bg-emerald-900 px-4 py-2 rounded-lg transition-colors text-sm font-semibold"
-      >
-        <i class="fa-solid fa-shield-halved"></i> <span>دخول الإدارة</span>
-      </button>
     </header>
+
+    <!-- زر الإدارة المخفي (شبه شفاف في الزاوية السفلية) -->
+    <button
+      id="toggle-view-btn"
+      class="fixed bottom-4 left-4 text-gray-400 hover:text-emerald-600 bg-gray-100 hover:bg-white w-10 h-10 rounded-full transition-all z-[9000] shadow-md opacity-30 hover:opacity-100 flex items-center justify-center border border-gray-200"
+      title="دخول الإدارة"
+    >
+      <i class="fa-solid fa-shield-halved"></i>
+    </button>
 
     <!-- المحتوى الرئيسي (واجهة المستخدم) -->
     <main
@@ -96,7 +99,8 @@
     >
       <!-- القائمة الجانبية / السفلية -->
       <div
-        class="w-full md:w-96 bg-white shadow-[0_0_15px_rgba(0,0,0,0.1)] flex flex-col z-10 h-[45%] md:h-full order-2 md:order-1 transition-all duration-300"
+        id="sidebar"
+        class="w-full md:w-96 bg-white shadow-[0_0_15px_rgba(0,0,0,0.1)] flex flex-col z-10 h-[45%] md:h-full order-3 md:order-1 shrink-0"
       >
         <!-- مربع البحث -->
         <div class="p-4 border-b border-gray-100 bg-white shrink-0">
@@ -124,10 +128,18 @@
         </div>
       </div>
 
+      <!-- شريط السحب (Resizer) لجعل القائمة مرنة -->
+      <div
+        id="resizer"
+        class="w-full h-2 md:h-full md:w-2 bg-gray-200 z-20 cursor-row-resize md:cursor-col-resize hover:bg-emerald-400 active:bg-emerald-500 order-2 flex items-center justify-center shrink-0"
+      >
+        <div class="w-12 h-1 md:w-1 md:h-12 bg-gray-400 rounded-full"></div>
+      </div>
+
       <!-- الخريطة -->
       <div
         id="map"
-        class="flex-1 w-full h-[55%] md:h-full order-1 md:order-2 bg-gray-200 relative z-0"
+        class="flex-1 w-full order-1 md:order-3 bg-gray-200 relative z-0"
       ></div>
     </main>
 
@@ -367,8 +379,7 @@
       } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
       // إعدادات Firebase والبيئة
-      const appId =
-        typeof __app_id !== "undefined" ? __app_id : "mosque-lectures-app";
+      const appId = "mosque-lectures-app";
 
       const firebaseConfig = {
         apiKey: "AIzaSyBx8BHOmWro4zSASKTMGpUfRaNkEHcVw20",
@@ -507,8 +518,11 @@
           12,
         );
         L.control.zoom({ position: "topleft" }).addTo(map);
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          attribution: "© OpenStreetMap",
+
+        // تم تغيير الخريطة إلى خرائط جوجل لتكون أنظف وأدق (بدون خطوط مزعجة وأسماء أوضح)
+        L.tileLayer("https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
+          attribution: "© Google Maps",
+          maxZoom: 20,
         }).addTo(map);
         markersLayer = L.layerGroup().addTo(map);
 
@@ -860,15 +874,13 @@
           const adminView = document.getElementById("admin-view");
 
           if (currentView === "admin") {
-            btn.innerHTML = `<i class="fa-solid fa-users"></i> <span>واجهة المستخدم</span>`;
-            btn.classList.replace("bg-emerald-800", "bg-blue-800");
-            btn.classList.replace("hover:bg-emerald-900", "hover:bg-blue-900");
+            btn.innerHTML = `<i class="fa-solid fa-users"></i>`;
+            btn.title = "العودة لواجهة المستخدم";
             userView.classList.add("hidden");
             adminView.classList.remove("hidden");
           } else {
-            btn.innerHTML = `<i class="fa-solid fa-shield-halved"></i> <span>دخول الإدارة</span>`;
-            btn.classList.replace("bg-blue-800", "bg-emerald-800");
-            btn.classList.replace("hover:bg-blue-900", "hover:bg-emerald-900");
+            btn.innerHTML = `<i class="fa-solid fa-shield-halved"></i>`;
+            btn.title = "دخول الإدارة";
             adminView.classList.add("hidden");
             userView.classList.remove("hidden");
             // تحديث الخريطة عند العودة لأنها قد تتأثر بكونها مخفية
@@ -978,6 +990,62 @@
           close();
         };
       }
+
+      // --- ميزة جعل القائمة مرنة (السحب للتكبير والتصغير) ---
+      const resizer = document.getElementById("resizer");
+      const sidebar = document.getElementById("sidebar");
+      let isResizing = false;
+
+      resizer.addEventListener("mousedown", () => {
+        isResizing = true;
+        document.body.style.userSelect = "none";
+      });
+      resizer.addEventListener(
+        "touchstart",
+        () => {
+          isResizing = true;
+          document.body.style.userSelect = "none";
+        },
+        { passive: true },
+      );
+
+      window.addEventListener("mousemove", (e) => {
+        if (!isResizing) return;
+        if (window.innerWidth >= 768) {
+          // وضع الكمبيوتر: تغيير العرض
+          let newWidth = window.innerWidth - e.clientX;
+          if (newWidth > 280 && newWidth < window.innerWidth - 200)
+            sidebar.style.width = newWidth + "px";
+        } else {
+          // وضع الجوال: تغيير الارتفاع
+          let newHeight = window.innerHeight - e.clientY;
+          if (newHeight > 100 && newHeight < window.innerHeight - 150)
+            sidebar.style.height = newHeight + "px";
+        }
+        if (map) map.invalidateSize();
+      });
+
+      window.addEventListener(
+        "touchmove",
+        (e) => {
+          if (!isResizing || window.innerWidth >= 768) return;
+          let newHeight = window.innerHeight - e.touches[0].clientY;
+          if (newHeight > 100 && newHeight < window.innerHeight - 150)
+            sidebar.style.height = newHeight + "px";
+          if (map) map.invalidateSize();
+        },
+        { passive: true },
+      );
+
+      const stopResize = () => {
+        if (isResizing) {
+          isResizing = false;
+          document.body.style.userSelect = "";
+          if (map) map.invalidateSize();
+        }
+      };
+      window.addEventListener("mouseup", stopResize);
+      window.addEventListener("touchend", stopResize);
 
       // بيانات تجريبية يتم إضافتها في حال كانت قاعدة البيانات فارغة تماماً
       async function seedInitialData() {
