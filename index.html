@@ -69,6 +69,41 @@
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
         padding: 4px !important;
       }
+
+      /* مؤشر اختيار المكان في الخريطة المنبثقة */
+      .picker-crosshair {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -100%);
+        font-size: 32px;
+        color: #ef4444;
+        z-index: 1000;
+        pointer-events: none;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      /* توسيع منطقة الإمساك بالفاصل (Resizer) دون تكبير شكله البصري كثيراً */
+      #resizer {
+        position: relative;
+      }
+      #resizer::before {
+        content: "";
+        position: absolute;
+        /* منطقة إضافية غير مرئية لتسهيل الإمساك باللمس أو الماوس */
+        top: -10px;
+        bottom: -10px;
+        left: -8px;
+        right: -8px;
+      }
+      @media (min-width: 768px) {
+        #resizer::before {
+          top: -8px;
+          bottom: -8px;
+          left: -10px;
+          right: -10px;
+        }
+      }
     </style>
   </head>
   <body
@@ -153,6 +188,154 @@
       </div>
     </div>
 
+    <!-- نافذة التقاط الموقع من الخريطة (جديد) -->
+    <div
+      id="map-picker-modal"
+      class="hidden fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center backdrop-blur-sm transition-opacity"
+    >
+      <div
+        class="bg-white p-4 rounded-2xl w-11/12 max-w-2xl shadow-xl flex flex-col h-[70vh]"
+      >
+        <h3 class="text-lg font-bold text-gray-800 mb-2">
+          📍 اختر الموقع من الخريطة
+        </h3>
+        <p class="text-sm text-gray-500 mb-3">
+          حرّك الخريطة وضع العلامة الحمراء فوق الجامع تماماً ثم اضغط تأكيد.
+        </p>
+        <div
+          class="flex-1 relative rounded-xl overflow-hidden border border-gray-300 mb-4"
+        >
+          <div id="picker-map" class="w-full h-full"></div>
+          <i class="fa-solid fa-location-dot picker-crosshair"></i>
+        </div>
+        <div class="flex justify-end gap-2 shrink-0">
+          <button
+            onclick="closeMapPicker()"
+            class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-semibold"
+          >
+            إلغاء
+          </button>
+          <button
+            onclick="confirmMapPick()"
+            class="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-bold shadow-md"
+          >
+            تأكيد الموقع
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- نافذة تعديل الجامع (جديد) -->
+    <div
+      id="edit-mosque-modal"
+      class="hidden fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center backdrop-blur-sm transition-opacity overflow-y-auto py-10"
+    >
+      <div class="bg-white p-6 rounded-2xl w-11/12 max-w-2xl shadow-xl my-auto">
+        <h3 class="text-xl font-bold text-gray-800 mb-4">
+          <i class="fa-solid fa-pen-to-square ml-2 text-blue-600"></i>تعديل
+          بيانات الجامع
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="md:col-span-2">
+            <label class="block text-sm text-gray-600 mb-1"
+              >اسم الجامع (إجباري)</label
+            >
+            <input
+              type="text"
+              id="edit-mosque-name"
+              class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1"
+              >تاريخ الإضافة</label
+            >
+            <input
+              type="date"
+              id="edit-mosque-date"
+              class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">اسم الحي</label>
+            <input
+              type="text"
+              id="edit-mosque-neighborhood"
+              class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-sm text-gray-600 mb-1"
+              >اسم الإمام الرسمي</label
+            >
+            <input
+              type="text"
+              id="edit-mosque-imam"
+              class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-sm text-gray-600 mb-1"
+              >الكلمة المعتادة</label
+            >
+            <input
+              type="text"
+              id="edit-mosque-speech"
+              class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+          </div>
+
+          <!-- التقاط الموقع في التعديل -->
+          <div
+            class="md:col-span-2 bg-blue-50 p-3 rounded-lg border border-blue-100 flex items-center justify-between mt-2"
+          >
+            <div class="text-sm text-gray-600">
+              <span class="font-bold text-gray-800 block mb-1"
+                >إحداثيات الموقع:</span
+              >
+              خط العرض:
+              <input
+                type="number"
+                step="any"
+                id="edit-mosque-lat"
+                class="w-24 bg-transparent border-b border-gray-300 outline-none"
+                required
+              />
+              | خط الطول:
+              <input
+                type="number"
+                step="any"
+                id="edit-mosque-lng"
+                class="w-24 bg-transparent border-b border-gray-300 outline-none"
+                required
+              />
+            </div>
+            <button
+              type="button"
+              onclick="openMapPicker('edit-mosque-lat', 'edit-mosque-lng')"
+              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-bold shadow"
+            >
+              📍 تحديد من الخريطة
+            </button>
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 mt-6 border-t pt-4">
+          <button
+            onclick="closeEditMosque()"
+            class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-semibold"
+          >
+            إلغاء
+          </button>
+          <button
+            onclick="saveEditMosque()"
+            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-md"
+          >
+            حفظ التعديلات
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- واجهة المستخدم -->
     <main
       id="user-view"
@@ -186,6 +369,20 @@
             <option value="nearest">📍 الأقرب لموقعي</option>
             <option value="has_lectures">🎤 يوجد بها محاضرات أو كلمات</option>
           </select>
+        </div>
+        <div
+          id="stats-bar"
+          class="px-4 py-2 border-b border-gray-100 bg-emerald-50/50 flex items-center justify-center gap-4 text-xs text-gray-600 shrink-0"
+        >
+          <span class="flex items-center gap-1 font-semibold"
+            ><i class="fa-solid fa-mosque text-emerald-600"></i>
+            <span id="stats-mosques-count">0</span> جامع</span
+          >
+          <span class="text-gray-300">|</span>
+          <span class="flex items-center gap-1 font-semibold"
+            ><i class="fa-solid fa-microphone text-blue-600"></i>
+            <span id="stats-lectures-count">0</span> محاضرة / كلمة</span
+          >
         </div>
         <div
           id="mosques-list-container"
@@ -324,36 +521,48 @@
                     placeholder="مثال: كلمة أسبوعية كل يوم ثلاثاء بعد العصر"
                   />
                 </div>
-                <div class="md:col-span-2">
-                  <label class="block text-sm text-gray-600 mb-1"
-                    >خط العرض (Latitude)</label
+
+                <!-- التعديل الجديد لاختيار الخريطة في الإضافة -->
+                <div
+                  class="md:col-span-4 bg-emerald-50 p-4 rounded-lg border border-emerald-100 flex flex-col md:flex-row items-center justify-between mt-2 gap-4"
+                >
+                  <div class="text-sm text-gray-700 w-full md:w-auto">
+                    <span class="font-bold block mb-1"
+                      >إحداثيات الموقع (إجباري):</span
+                    >
+                    خط العرض:
+                    <input
+                      type="number"
+                      step="any"
+                      id="new-mosque-lat"
+                      class="w-24 bg-transparent border-b border-gray-400 outline-none"
+                      required
+                    />
+                    | خط الطول:
+                    <input
+                      type="number"
+                      step="any"
+                      id="new-mosque-lng"
+                      class="w-24 bg-transparent border-b border-gray-400 outline-none"
+                      required
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onclick="openMapPicker('new-mosque-lat', 'new-mosque-lng')"
+                    class="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-bold shadow-md w-full md:w-auto flex items-center justify-center gap-2"
                   >
-                  <input
-                    type="number"
-                    step="any"
-                    id="new-mosque-lat"
-                    class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                    required
-                  />
+                    <i class="fa-solid fa-map-location-dot"></i> تحديد الموقع من
+                    الخريطة
+                  </button>
                 </div>
-                <div class="md:col-span-2">
-                  <label class="block text-sm text-gray-600 mb-1"
-                    >خط الطول (Longitude)</label
-                  >
-                  <input
-                    type="number"
-                    step="any"
-                    id="new-mosque-lng"
-                    class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                    required
-                  />
-                </div>
+
                 <div class="md:col-span-4 mt-2 border-t pt-4 border-gray-200">
                   <button
                     type="submit"
-                    class="bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 w-full font-bold text-lg transition-colors"
+                    class="bg-gray-800 text-white px-6 py-3 rounded-lg hover:bg-gray-900 w-full font-bold text-lg transition-colors shadow-lg"
                   >
-                    حفظ الجامع
+                    حفظ الجامع في القاعدة
                   </button>
                 </div>
               </form>
@@ -582,6 +791,11 @@
       let mosquesCollectionRef;
       let feedbackCollectionRef;
 
+      // متغيرات التقاط الخريطة
+      let pickerMap = null;
+      let targetLatInputId = null;
+      let targetLngInputId = null;
+
       const normalizeArabicText = (text) => {
         if (!text) return "";
         return text
@@ -619,6 +833,23 @@
         return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
       }
 
+      // حساب وعرض عدد الجوامع وعدد المحاضرات/الكلمات (جديد)
+      function updateStatsBar() {
+        const mosquesEl = document.getElementById("stats-mosques-count");
+        const lecturesEl = document.getElementById("stats-lectures-count");
+        if (!mosquesEl || !lecturesEl) return;
+
+        const mosquesCount = globalMosques.length;
+        let lecturesCount = 0;
+        globalMosques.forEach((m) => {
+          lecturesCount += m.lectures ? m.lectures.length : 0;
+          if (m.speech && m.speech.trim() !== "") lecturesCount += 1;
+        });
+
+        mosquesEl.innerText = mosquesCount;
+        lecturesEl.innerText = lecturesCount;
+      }
+
       async function initApp() {
         try {
           await signInAnonymously(auth);
@@ -648,10 +879,18 @@
               snapshot.forEach((doc) =>
                 globalMosques.push({ id: doc.id, ...doc.data() }),
               );
+
+              // بيانات أولية (جوامع أبها) تظهر للمرة الأولى فقط إذا كانت القاعدة فارغة
+              if (globalMosques.length === 0 && !window.seeded) {
+                window.seeded = true;
+                seedAbhaMosques();
+              }
+
               renderUserMosques();
               updateMapMarkers();
               renderAdminMosquesTable();
               renderAdminLecturesSection();
+              updateStatsBar();
             },
             (error) => {
               showToast("حدث خطأ في جلب البيانات من الخادم", true);
@@ -674,6 +913,83 @@
         }
       }
 
+      // إضافة قائمة مبدئية لأشهر جوامع أبها عند فراغ قاعدة البيانات
+      async function seedAbhaMosques() {
+        const abhaMosques = [
+          {
+            name: "جامع الملك فيصل",
+            neighborhood: "الخالدية",
+            lat: 18.2166,
+            lng: 42.5053,
+            date: "2026-01-01",
+            lectures: [],
+          },
+          {
+            name: "جامع الراجحي",
+            neighborhood: "الموظفين",
+            lat: 18.2255,
+            lng: 42.5122,
+            date: "2026-01-01",
+            lectures: [],
+          },
+          {
+            name: "جامع المفتاحة (الملك عبدالعزيز)",
+            neighborhood: "المفتاحة",
+            lat: 18.214,
+            lng: 42.502,
+            date: "2026-01-01",
+            lectures: [],
+          },
+          {
+            name: "جامع بن حمران",
+            neighborhood: "النميص",
+            lat: 18.2323,
+            lng: 42.5011,
+            date: "2026-01-01",
+            lectures: [],
+          },
+          {
+            name: "جامع الإمام البخاري",
+            neighborhood: "حي المنسك",
+            lat: 18.24,
+            lng: 42.52,
+            date: "2026-01-01",
+            lectures: [],
+          },
+          {
+            name: "جامع الشبل",
+            neighborhood: "الوسط",
+            lat: 18.2111,
+            lng: 42.4988,
+            date: "2026-01-01",
+            lectures: [],
+          },
+          {
+            name: "جامع الملك فهد",
+            neighborhood: "الضباب",
+            lat: 18.22,
+            lng: 42.51,
+            date: "2026-01-01",
+            lectures: [],
+          },
+          {
+            name: "مسجد النور",
+            neighborhood: "الشمسان",
+            lat: 18.23,
+            lng: 42.49,
+            date: "2026-01-01",
+            lectures: [],
+          },
+        ];
+        try {
+          for (const item of abhaMosques) {
+            await addDoc(mosquesCollectionRef, item);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
       function initMap() {
         const streetMap = L.tileLayer(
           "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
@@ -684,11 +1000,12 @@
           { maxZoom: 20 },
         );
 
+        // نقطة أبها الافتراضية
         map = L.map("map", {
           zoomControl: false,
           attributionControl: false,
           layers: [streetMap],
-        }).setView([18.2164, 42.5053], 12);
+        }).setView([18.2164, 42.5053], 13);
         L.control
           .layers(
             { "خريطة عادية": streetMap, "قمر صناعي": satelliteMap },
@@ -707,6 +1024,130 @@
 
         setTimeout(() => map.invalidateSize(), 500);
       }
+
+      // --- دوال التقاط الموقع (جديد) ---
+      window.openMapPicker = (latInputId, lngInputId) => {
+        targetLatInputId = latInputId;
+        targetLngInputId = lngInputId;
+        document.getElementById("map-picker-modal").classList.remove("hidden");
+
+        if (!pickerMap) {
+          const streetMap = L.tileLayer(
+            "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+            { maxZoom: 20 },
+          );
+          const satelliteMap = L.tileLayer(
+            "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+            { maxZoom: 20 },
+          );
+          pickerMap = L.map("picker-map", {
+            zoomControl: false,
+            attributionControl: false,
+            layers: [streetMap],
+          }).setView([18.2164, 42.5053], 15);
+          L.control
+            .layers({ عادية: streetMap, "قمر صناعي": satelliteMap })
+            .addTo(pickerMap);
+        }
+
+        // محاولة جلب الإحداثيات المكتوبة مسبقاً لتوسيط الخريطة عليها
+        const currentLat = parseFloat(
+          document.getElementById(latInputId).value,
+        );
+        const currentLng = parseFloat(
+          document.getElementById(lngInputId).value,
+        );
+
+        if (!isNaN(currentLat) && !isNaN(currentLng)) {
+          pickerMap.setView([currentLat, currentLng], 16);
+        } else if (userLocation) {
+          pickerMap.setView([userLocation.lat, userLocation.lng], 15);
+        }
+
+        setTimeout(() => pickerMap.invalidateSize(), 300);
+      };
+
+      window.confirmMapPick = () => {
+        const center = pickerMap.getCenter();
+        document.getElementById(targetLatInputId).value = center.lat.toFixed(6);
+        document.getElementById(targetLngInputId).value = center.lng.toFixed(6);
+        closeMapPicker();
+        showToast("تم اعتماد الإحداثيات");
+      };
+
+      window.closeMapPicker = () => {
+        document.getElementById("map-picker-modal").classList.add("hidden");
+      };
+
+      // --- دوال تعديل الجامع (جديد) ---
+      let editingMosqueId = null;
+      window.openEditMosque = (id) => {
+        editingMosqueId = id;
+        const m = globalMosques.find((x) => x.id === id);
+        if (!m) return;
+
+        document.getElementById("edit-mosque-name").value = m.name || "";
+        document.getElementById("edit-mosque-date").value = m.date || "";
+        document.getElementById("edit-mosque-neighborhood").value =
+          m.neighborhood || "";
+        document.getElementById("edit-mosque-imam").value = m.imam || "";
+        document.getElementById("edit-mosque-speech").value = m.speech || "";
+        document.getElementById("edit-mosque-lat").value = m.lat || "";
+        document.getElementById("edit-mosque-lng").value = m.lng || "";
+
+        document.getElementById("edit-mosque-modal").classList.remove("hidden");
+      };
+
+      window.closeEditMosque = () => {
+        document.getElementById("edit-mosque-modal").classList.add("hidden");
+        editingMosqueId = null;
+      };
+
+      window.saveEditMosque = async () => {
+        const name = document.getElementById("edit-mosque-name").value;
+        const date = document.getElementById("edit-mosque-date").value;
+        const neighborhood = document.getElementById(
+          "edit-mosque-neighborhood",
+        ).value;
+        const imam = document.getElementById("edit-mosque-imam").value;
+        const speech = document.getElementById("edit-mosque-speech").value;
+        const lat = parseFloat(
+          document.getElementById("edit-mosque-lat").value,
+        );
+        const lng = parseFloat(
+          document.getElementById("edit-mosque-lng").value,
+        );
+
+        if (!name || isNaN(lat) || isNaN(lng))
+          return showToast("أكمل الحقول الإجبارية", true);
+
+        try {
+          await updateDoc(
+            doc(
+              db,
+              "artifacts",
+              appId,
+              "public",
+              "data",
+              "mosques",
+              editingMosqueId,
+            ),
+            {
+              name,
+              date,
+              neighborhood,
+              imam,
+              speech,
+              lat,
+              lng,
+            },
+          );
+          showToast("تم تحديث بيانات الجامع بنجاح");
+          closeEditMosque();
+        } catch (e) {
+          showToast("فشل التعديل", true);
+        }
+      };
 
       function getFilteredAndSortedMosques() {
         const query = normalizeArabicText(
@@ -969,7 +1410,7 @@
           } catch (err) {
             showToast("فشل إضافة الجامع", true);
           } finally {
-            btn.innerText = "حفظ الجامع";
+            btn.innerText = "حفظ الجامع في القاعدة";
             btn.disabled = false;
           }
         });
@@ -996,7 +1437,7 @@
       function renderAdminMosquesTable() {
         const tbody = document.getElementById("admin-mosques-table-body");
         if (globalMosques.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="3" class="text-center p-6 text-gray-500">لا يوجد جوامع.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="3" class="text-center p-6 text-gray-500">لا توجد جوامع.</td></tr>`;
           return;
         }
         tbody.innerHTML = globalMosques
@@ -1009,7 +1450,8 @@
                   ${m.imam ? `<div class="text-xs text-emerald-600">الإمام: ${m.imam}</div>` : ""}
               </td>
               <td class="p-3 text-sm text-gray-500" dir="ltr">${m.lat.toFixed(4)}, ${m.lng.toFixed(4)}</td>
-              <td class="p-3 text-center">
+              <td class="p-3 text-center whitespace-nowrap">
+                  <button onclick="openEditMosque('${m.id}')" class="text-blue-500 hover:bg-blue-100 p-2 rounded-lg transition-colors ml-1"><i class="fa-solid fa-pen"></i></button>
                   <button onclick="deleteMosque('${m.id}')" class="text-red-500 hover:bg-red-100 p-2 rounded-lg transition-colors"><i class="fa-solid fa-trash-can"></i></button>
               </td>
           </tr>`,
@@ -1365,9 +1807,12 @@
                     </div>
                 </div>
             </div>
-         <\/body>
-         <\/html>
+         <\\/body>
+         <\\/html>
          `;
+
+        // إزالة خطوط الإغلاق الوهمية التي تخرب السيرفر
+        htmlContent = htmlContent.replace(/\\/g, "");
 
         const printWin = window.open("", "", "width=1000,height=800");
         printWin.document.write(htmlContent);
