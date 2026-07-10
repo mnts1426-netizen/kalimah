@@ -24,7 +24,6 @@
       body {
         font-family: "Cairo", sans-serif;
       }
-      /* إخفاء شريط التمرير الافتراضي لشكل أنظف */
       ::-webkit-scrollbar {
         width: 6px;
       }
@@ -39,7 +38,6 @@
         background: #059669;
       }
 
-      /* تأثيرات أيقونات الخريطة */
       .custom-marker {
         background-color: #10b981;
         border: 3px solid white;
@@ -62,12 +60,20 @@
         height: 30%;
         border-radius: 50%;
       }
+      .leaflet-control-attribution {
+        display: none !important;
+      }
+      .leaflet-control-layers {
+        font-family: "Cairo", sans-serif !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+        padding: 4px !important;
+      }
     </style>
   </head>
   <body
     class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex flex-col"
   >
-    <!-- شريط الإشعارات (Toast) -->
     <div
       id="toast-container"
       class="fixed top-20 left-1/2 transform -translate-x-1/2 z-[9999] flex flex-col gap-2 pointer-events-none"
@@ -77,38 +83,91 @@
     <header
       class="bg-emerald-700 text-white p-4 shadow-md flex justify-between items-center z-20 shrink-0"
     >
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 select-none">
         <i class="fa-solid fa-map-location-dot text-2xl"></i>
-        <h1 class="text-xl font-bold">دليل المحاضرات والجوامع</h1>
+        <!-- المدخل السري: انقر 5 مرات هنا -->
+        <h1
+          id="secret-admin-trigger"
+          class="text-xl font-bold cursor-pointer transition-opacity active:opacity-50"
+        >
+          دليل المحاضرات والجوامع
+        </h1>
       </div>
     </header>
 
-    <!-- زر الإدارة المخفي (شبه شفاف في الزاوية السفلية) -->
+    <!-- زر الإدارة المخفي -->
     <button
       id="toggle-view-btn"
-      class="fixed bottom-4 left-4 text-gray-400 hover:text-emerald-600 bg-gray-100 hover:bg-white w-10 h-10 rounded-full transition-all z-[9000] shadow-md opacity-30 hover:opacity-100 flex items-center justify-center border border-gray-200"
-      title="دخول الإدارة"
+      class="hidden fixed bottom-4 left-4 text-emerald-600 bg-white w-12 h-12 rounded-full transition-all z-[9000] shadow-lg flex items-center justify-center border border-gray-200 hover:bg-emerald-50"
+      title="تبديل الواجهة"
     >
-      <i class="fa-solid fa-shield-halved"></i>
+      <i class="fa-solid fa-shield-halved text-xl"></i>
     </button>
 
-    <!-- المحتوى الرئيسي (واجهة المستخدم) -->
+    <!-- زر الاقتراحات والشكاوى للمستخدم -->
+    <button
+      onclick="
+        document.getElementById('feedback-modal').classList.remove('hidden')
+      "
+      class="fixed bottom-4 right-4 bg-emerald-600 text-white w-12 h-12 rounded-full shadow-lg z-[9000] hover:bg-emerald-700 transition-colors flex items-center justify-center"
+      title="الاقتراحات والشكاوى"
+    >
+      <i class="fa-solid fa-comment-dots text-xl"></i>
+    </button>
+
+    <!-- نافذة إرسال الاقتراحات -->
+    <div
+      id="feedback-modal"
+      class="hidden fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center backdrop-blur-sm transition-opacity"
+    >
+      <div class="bg-white p-6 rounded-2xl w-11/12 max-w-md shadow-xl">
+        <h3 class="text-lg font-bold text-gray-800 mb-2">
+          <i class="fa-solid fa-envelope-open-text ml-2 text-emerald-600"></i
+          >الاقتراحات والشكاوى
+        </h3>
+        <p class="text-sm text-gray-500 mb-4">
+          يسعدنا سماع رأيك لتحسين البرنامج. (رسالتك ستصل للإدارة مباشرة)
+        </p>
+        <textarea
+          id="feedback-text"
+          rows="4"
+          class="w-full border border-gray-300 rounded-lg p-3 mb-4 focus:ring-2 focus:ring-emerald-500 focus:outline-none resize-none text-sm"
+          placeholder="اكتب اقتراحك أو شكواك هنا..."
+        ></textarea>
+        <div class="flex justify-end gap-2">
+          <button
+            onclick="
+              document.getElementById('feedback-modal').classList.add('hidden')
+            "
+            class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-semibold text-sm"
+          >
+            إلغاء
+          </button>
+          <button
+            onclick="sendFeedback()"
+            class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-semibold text-sm"
+          >
+            إرسال الرسالة
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- واجهة المستخدم -->
     <main
       id="user-view"
       class="flex-1 flex flex-col md:flex-row relative overflow-hidden h-full"
     >
-      <!-- القائمة الجانبية / السفلية -->
       <div
         id="sidebar"
-        class="w-full md:w-96 bg-white shadow-[0_0_15px_rgba(0,0,0,0.1)] flex flex-col z-10 h-[45%] md:h-full order-3 md:order-1 shrink-0"
+        class="w-full md:w-[400px] bg-white shadow-[0_0_15px_rgba(0,0,0,0.1)] flex flex-col z-10 h-[45%] md:h-full order-3 md:order-1 shrink-0 transition-all duration-300"
       >
-        <!-- مربع البحث -->
         <div class="p-4 border-b border-gray-100 bg-white shrink-0">
           <div class="relative">
             <input
               type="text"
               id="search-input"
-              placeholder="ابحث عن اسم الجامع (مثال: الراجحي)..."
+              placeholder="ابحث عن جامع، حي، إمام، أو محاضرة..."
               class="w-full bg-gray-50 border border-gray-200 rounded-xl pr-10 pl-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-sm"
             />
             <i
@@ -116,19 +175,35 @@
             ></i>
           </div>
         </div>
-        <!-- قائمة الجوامع والمحاضرات -->
+        <div
+          class="px-4 pb-3 border-b border-gray-100 bg-white flex gap-2 shrink-0"
+        >
+          <select
+            id="sort-filter"
+            class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-600 cursor-pointer"
+          >
+            <option value="all">الكل (الافتراضي)</option>
+            <option value="nearest">📍 الأقرب لموقعي</option>
+            <option value="has_lectures">🎤 يوجد بها محاضرات أو كلمات</option>
+          </select>
+        </div>
         <div
           id="mosques-list-container"
           class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50"
         >
-          <!-- سيتم حقن الجوامع هنا عبر الجافاسكربت -->
           <div class="text-center text-gray-400 mt-10">
             جاري تحميل البيانات...
           </div>
         </div>
+        <div
+          class="py-2 bg-gray-50 border-t border-gray-200 text-center shrink-0"
+        >
+          <span class="text-[9px] text-gray-400 font-semibold"
+            >بيانات الخرائط © Google Maps & Leaflet</span
+          >
+        </div>
       </div>
 
-      <!-- شريط السحب (Resizer) لجعل القائمة مرنة -->
       <div
         id="resizer"
         class="w-full h-2 md:h-full md:w-2 bg-gray-200 z-20 cursor-row-resize md:cursor-col-resize hover:bg-emerald-400 active:bg-emerald-500 order-2 flex items-center justify-center shrink-0"
@@ -143,7 +218,7 @@
       ></div>
     </main>
 
-    <!-- المحتوى الرئيسي (واجهة الإدارة) -->
+    <!-- واجهة الإدارة -->
     <main
       id="admin-view"
       class="hidden flex-1 overflow-y-auto bg-slate-50 p-4 md:p-8 h-full"
@@ -152,18 +227,36 @@
         class="max-w-5xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
       >
         <!-- تابات الإدارة -->
-        <div class="flex border-b border-gray-200 bg-gray-50">
+        <div
+          class="flex border-b border-gray-200 bg-gray-50 overflow-x-auto whitespace-nowrap"
+        >
           <button
+            onclick="switchTab('mosques')"
             id="tab-mosques-btn"
-            class="flex-1 py-4 text-center font-bold text-lg transition-colors bg-white text-emerald-700 border-b-2 border-emerald-500"
+            class="px-6 py-4 text-center font-bold text-sm md:text-base transition-colors bg-white text-emerald-700 border-b-2 border-emerald-500"
           >
             إدارة الجوامع
           </button>
           <button
+            onclick="switchTab('lectures')"
             id="tab-lectures-btn"
-            class="flex-1 py-4 text-center font-bold text-lg transition-colors text-gray-500 hover:bg-gray-100"
+            class="px-6 py-4 text-center font-bold text-sm md:text-base transition-colors text-gray-500 hover:bg-gray-100"
           >
             إدارة المحاضرات
+          </button>
+          <button
+            onclick="switchTab('log')"
+            id="tab-log-btn"
+            class="px-6 py-4 text-center font-bold text-sm md:text-base transition-colors text-gray-500 hover:bg-gray-100"
+          >
+            سجل التقارير
+          </button>
+          <button
+            onclick="switchTab('feedback')"
+            id="tab-feedback-btn"
+            class="px-6 py-4 text-center font-bold text-sm md:text-base transition-colors text-gray-500 hover:bg-gray-100"
+          >
+            الشكاوى والاقتراحات
           </button>
         </div>
 
@@ -172,7 +265,7 @@
           <div id="admin-mosques-section" class="space-y-8 block">
             <div class="bg-gray-50 p-6 rounded-xl border border-gray-200">
               <h3 class="text-lg font-bold text-gray-800 mb-4">
-                <i class="fa-solid fa-plus ml-2"></i>إضافة جامع جديد
+                <i class="fa-solid fa-plus ml-2"></i>إضافة جامع أو مسجد جديد
               </h3>
               <form
                 id="add-mosque-form"
@@ -180,17 +273,58 @@
               >
                 <div class="md:col-span-2">
                   <label class="block text-sm text-gray-600 mb-1"
-                    >اسم الجامع</label
+                    >اسم الجامع (إجباري)</label
                   >
                   <input
                     type="text"
                     id="new-mosque-name"
                     class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                    placeholder="مثال: جامع الملك فهد"
                     required
                   />
                 </div>
-                <div>
+                <div class="md:col-span-2">
+                  <label class="block text-sm text-gray-600 mb-1"
+                    >تاريخ الإضافة / الإنشاء (إجباري)</label
+                  >
+                  <input
+                    type="date"
+                    id="new-mosque-date"
+                    class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    required
+                  />
+                </div>
+                <div class="md:col-span-2">
+                  <label class="block text-sm text-gray-600 mb-1"
+                    >اسم الحي (اختياري)</label
+                  >
+                  <input
+                    type="text"
+                    id="new-mosque-neighborhood"
+                    class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  />
+                </div>
+                <div class="md:col-span-2">
+                  <label class="block text-sm text-gray-600 mb-1"
+                    >اسم الإمام الرسمي (اختياري)</label
+                  >
+                  <input
+                    type="text"
+                    id="new-mosque-imam"
+                    class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  />
+                </div>
+                <div class="md:col-span-4">
+                  <label class="block text-sm text-gray-600 mb-1"
+                    >الكلمة المعتادة (اختياري)</label
+                  >
+                  <input
+                    type="text"
+                    id="new-mosque-speech"
+                    class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    placeholder="مثال: كلمة أسبوعية كل يوم ثلاثاء بعد العصر"
+                  />
+                </div>
+                <div class="md:col-span-2">
                   <label class="block text-sm text-gray-600 mb-1"
                     >خط العرض (Latitude)</label
                   >
@@ -199,11 +333,10 @@
                     step="any"
                     id="new-mosque-lat"
                     class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                    placeholder="18.2164"
                     required
                   />
                 </div>
-                <div>
+                <div class="md:col-span-2">
                   <label class="block text-sm text-gray-600 mb-1"
                     >خط الطول (Longitude)</label
                   >
@@ -212,21 +345,19 @@
                     step="any"
                     id="new-mosque-lng"
                     class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                    placeholder="42.5053"
                     required
                   />
                 </div>
-                <div class="md:col-span-4 mt-2">
+                <div class="md:col-span-4 mt-2 border-t pt-4 border-gray-200">
                   <button
                     type="submit"
-                    class="bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 w-full md:w-auto font-semibold"
+                    class="bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 w-full font-bold text-lg transition-colors"
                   >
                     حفظ الجامع
                   </button>
                 </div>
               </form>
             </div>
-
             <div>
               <h3 class="text-lg font-bold text-gray-800 mb-4">
                 الجوامع المسجلة
@@ -237,15 +368,12 @@
                 <table class="w-full text-right border-collapse">
                   <thead>
                     <tr class="bg-gray-100 text-gray-600 text-sm">
-                      <th class="p-3">اسم الجامع</th>
+                      <th class="p-3">البيانات الأساسية</th>
                       <th class="p-3">الإحداثيات</th>
-                      <th class="p-3">المحاضرات</th>
-                      <th class="p-3 text-center">إجراء</th>
+                      <th class="p-3 text-center">الإجراء</th>
                     </tr>
                   </thead>
-                  <tbody id="admin-mosques-table-body">
-                    <!-- سيتم حقن صفوف الجوامع هنا -->
-                  </tbody>
+                  <tbody id="admin-mosques-table-body"></tbody>
                 </table>
               </div>
             </div>
@@ -254,7 +382,6 @@
           <!-- قسم إدارة المحاضرات -->
           <div id="admin-lectures-section" class="space-y-6 hidden">
             <div class="flex flex-col md:flex-row gap-6">
-              <!-- اختيار الجامع -->
               <div
                 class="w-full md:w-1/3 border-l border-gray-100 pl-0 md:pl-6"
               >
@@ -264,12 +391,8 @@
                 <div
                   id="admin-lectures-mosques-list"
                   class="space-y-2 max-h-[60vh] overflow-y-auto pr-2"
-                >
-                  <!-- سيتم حقن قائمة الجوامع هنا للاختيار -->
-                </div>
+                ></div>
               </div>
-
-              <!-- تفاصيل المحاضرات -->
               <div class="w-full md:w-2/3">
                 <div id="lecture-management-area" class="hidden">
                   <div
@@ -330,29 +453,83 @@
                       <div class="md:col-span-2 mt-2">
                         <button
                           type="submit"
-                          class="bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 w-full md:w-auto font-semibold"
+                          class="bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 w-full font-semibold"
                         >
                           حفظ المحاضرة
                         </button>
                       </div>
                     </form>
                   </div>
-
                   <div>
                     <h3 class="text-lg font-bold text-gray-800 mb-4">
                       المحاضرات المجدولة
                     </h3>
-                    <div id="admin-lectures-list" class="space-y-3">
-                      <!-- سيتم حقن المحاضرات هنا -->
-                    </div>
+                    <div id="admin-lectures-list" class="space-y-3"></div>
                   </div>
                 </div>
-
                 <div
                   id="lecture-management-empty"
                   class="h-full flex items-center justify-center text-gray-400 p-10 bg-gray-50 rounded-xl border border-dashed border-gray-200"
                 >
                   الرجاء اختيار جامع من القائمة لإدارة محاضراته.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- قسم سجل التقارير -->
+          <div id="admin-log-section" class="space-y-6 hidden">
+            <div class="bg-gray-50 p-6 rounded-xl border border-gray-200">
+              <h3 class="text-lg font-bold text-gray-800 mb-4">
+                <i class="fa-solid fa-print ml-2"></i>طباعة تقرير الأنشطة
+              </h3>
+              <p class="text-sm text-gray-600 mb-4">
+                حدد تاريخ البداية والنهاية لطباعة المحاضرات. (اترك التواريخ
+                فارغة لطباعة كل الأنشطة)
+              </p>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div>
+                  <label class="block text-sm text-gray-600 mb-1"
+                    >من تاريخ</label
+                  >
+                  <input
+                    type="date"
+                    id="report-start-date"
+                    class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm text-gray-600 mb-1"
+                    >إلى تاريخ</label
+                  >
+                  <input
+                    type="date"
+                    id="report-end-date"
+                    class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <button
+                    onclick="printLogReport()"
+                    class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 w-full font-bold transition-colors"
+                  >
+                    <i class="fa-solid fa-file-pdf ml-2"></i> إنشاء وطباعة
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- قسم الشكاوى والاقتراحات -->
+          <div id="admin-feedback-section" class="space-y-6 hidden">
+            <div class="bg-white rounded-xl">
+              <h3 class="text-lg font-bold text-gray-800 mb-4">
+                رسائل المستخدمين
+              </h3>
+              <div id="feedback-admin-list" class="space-y-3">
+                <div class="text-center text-gray-400 py-10">
+                  جاري تحميل الرسائل...
                 </div>
               </div>
             </div>
@@ -366,7 +543,6 @@
       import {
         getAuth,
         signInAnonymously,
-        signInWithCustomToken,
       } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
       import {
         getFirestore,
@@ -378,9 +554,7 @@
         deleteDoc,
       } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-      // إعدادات Firebase والبيئة
       const appId = "mosque-lectures-app";
-
       const firebaseConfig = {
         apiKey: "AIzaSyBx8BHOmWro4zSASKTMGpUfRaNkEHcVw20",
         authDomain: "press-9e413.firebaseapp.com",
@@ -397,18 +571,17 @@
       const auth = getAuth(app);
       const db = getFirestore(app);
 
-      // متغيرات الحالة العامة (State)
       let globalMosques = [];
+      let globalFeedback = [];
       let map = null;
       let markersLayer = null;
       let selectedMosqueId = null;
       let adminSelectedMosqueId = null;
-      let isSearchActive = false;
+      let userLocation = null;
 
-      // المسار السحابي الصحيح لبيانات الجمعية (Public Data)
       let mosquesCollectionRef;
+      let feedbackCollectionRef;
 
-      /* --- دوال مساعدة --- */
       const normalizeArabicText = (text) => {
         if (!text) return "";
         return text
@@ -426,47 +599,31 @@
         toast.className = `px-4 py-2 rounded-lg shadow-lg text-white font-semibold text-sm pointer-events-auto transition-opacity duration-300 opacity-0 ${isError ? "bg-red-500" : "bg-emerald-600"}`;
         toast.innerText = message;
         container.appendChild(toast);
-
-        // تأثير الظهور
-        requestAnimationFrame(() => {
-          toast.classList.remove("opacity-0");
-        });
-
+        requestAnimationFrame(() => toast.classList.remove("opacity-0"));
         setTimeout(() => {
           toast.classList.add("opacity-0");
           setTimeout(() => toast.remove(), 300);
         }, 3000);
       };
 
-      // إتاحة بعض الدوال للـ HTML من خلال window
-      window.selectMosque = (id) => {
-        selectedMosqueId = id;
-        renderUserMosques();
-        updateMapMarkers();
-
-        const m = globalMosques.find((x) => x.id === id);
-        if (m && map) {
-          map.flyTo([m.lat, m.lng], 15, { duration: 1 });
-        }
-      };
-
-      window.adminSelectMosque = (id) => {
-        adminSelectedMosqueId = id;
-        renderAdminLecturesSection();
-      };
+      function getDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371;
+        const dLat = ((lat2 - lat1) * Math.PI) / 180;
+        const dLon = ((lon2 - lon1) * Math.PI) / 180;
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos((lat1 * Math.PI) / 180) *
+            Math.cos((lat2 * Math.PI) / 180) *
+            Math.sin(dLon / 2) *
+            Math.sin(dLon / 2);
+        return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+      }
 
       async function initApp() {
         try {
-          // 1. تسجيل الدخول حسب القاعدة الصارمة (Auth Before Queries)
-          if (typeof __initial_auth_token !== "undefined") {
-            await signInWithCustomToken(auth, __initial_auth_token);
-          } else {
-            await signInAnonymously(auth);
-          }
-
+          await signInAnonymously(auth);
           if (!auth.currentUser) return;
 
-          // 2. تحديد المرجع (Strict Paths Rule)
           mosquesCollectionRef = collection(
             db,
             "artifacts",
@@ -475,80 +632,119 @@
             "data",
             "mosques",
           );
+          feedbackCollectionRef = collection(
+            db,
+            "artifacts",
+            appId,
+            "public",
+            "data",
+            "feedback",
+          );
 
-          // 3. الاستماع للتغيرات الحية
           onSnapshot(
             mosquesCollectionRef,
             (snapshot) => {
               globalMosques = [];
-              snapshot.forEach((doc) => {
-                globalMosques.push({ id: doc.id, ...doc.data() });
-              });
-
-              // تحديث الواجهات عند وصول بيانات جديدة
+              snapshot.forEach((doc) =>
+                globalMosques.push({ id: doc.id, ...doc.data() }),
+              );
               renderUserMosques();
               updateMapMarkers();
               renderAdminMosquesTable();
               renderAdminLecturesSection();
-
-              // إذا لم يكن هناك جوامع، نضيف بيانات تجريبية (فقط للمرة الأولى)
-              if (globalMosques.length === 0 && !window.dataSeeded) {
-                seedInitialData();
-                window.dataSeeded = true;
-              }
             },
             (error) => {
-              console.error("Firestore error:", error);
               showToast("حدث خطأ في جلب البيانات من الخادم", true);
             },
           );
 
-          // 4. تهيئة الخريطة
+          onSnapshot(feedbackCollectionRef, (snapshot) => {
+            globalFeedback = [];
+            snapshot.forEach((doc) =>
+              globalFeedback.push({ id: doc.id, ...doc.data() }),
+            );
+            globalFeedback.sort((a, b) => new Date(b.date) - new Date(a.date));
+            renderAdminFeedback();
+          });
+
           initMap();
         } catch (error) {
-          console.error("Initialization error:", error);
           document.getElementById("mosques-list-container").innerHTML =
-            `<div class="text-center text-red-500 mt-10 p-4">لم نتمكن من الاتصال بقاعدة البيانات. (تأكد من إعدادات الشبكة)</div>`;
+            `<div class="text-center text-red-500 mt-10 p-4">خطأ في الاتصال بقاعدة البيانات.</div>`;
         }
       }
 
       function initMap() {
-        map = L.map("map", { zoomControl: false }).setView(
-          [18.2164, 42.5053],
-          12,
+        const streetMap = L.tileLayer(
+          "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+          { maxZoom: 20 },
         );
-        L.control.zoom({ position: "topleft" }).addTo(map);
+        const satelliteMap = L.tileLayer(
+          "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+          { maxZoom: 20 },
+        );
 
-        // تم تغيير الخريطة إلى خرائط جوجل لتكون أنظف وأدق (بدون خطوط مزعجة وأسماء أوضح)
-        L.tileLayer("https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
-          attribution: "© Google Maps",
-          maxZoom: 20,
-        }).addTo(map);
+        map = L.map("map", {
+          zoomControl: false,
+          attributionControl: false,
+          layers: [streetMap],
+        }).setView([18.2164, 42.5053], 12);
+        L.control
+          .layers(
+            { "خريطة عادية": streetMap, "قمر صناعي": satelliteMap },
+            {},
+            { position: "topleft" },
+          )
+          .addTo(map);
         markersLayer = L.layerGroup().addTo(map);
 
-        // إصلاح حجم الخريطة عند التبديل بين الشاشات
-        setTimeout(() => {
-          map.invalidateSize();
-        }, 500);
+        map.on("click", () => {
+          if (window.innerWidth < 768) {
+            document.getElementById("sidebar").style.height = "150px";
+            if (map) setTimeout(() => map.invalidateSize(), 300);
+          }
+        });
+
+        setTimeout(() => map.invalidateSize(), 500);
+      }
+
+      function getFilteredAndSortedMosques() {
+        const query = normalizeArabicText(
+          document.getElementById("search-input").value,
+        );
+        const filterVal = document.getElementById("sort-filter").value;
+
+        let filtered = globalMosques.filter((m) => {
+          const searchStr = `${m.name || ""} ${m.imam || ""} ${m.speech || ""} ${m.neighborhood || ""} ${(m.lectures || []).map((l) => l.title + " " + l.speaker).join(" ")}`;
+          return normalizeArabicText(searchStr).includes(query);
+        });
+
+        if (filterVal === "has_lectures") {
+          filtered = filtered.filter(
+            (m) =>
+              (m.lectures && m.lectures.length > 0) ||
+              (m.speech && m.speech.trim() !== ""),
+          );
+        }
+
+        if (filterVal === "nearest" && userLocation) {
+          filtered.sort(
+            (a, b) =>
+              getDistance(userLocation.lat, userLocation.lng, a.lat, a.lng) -
+              getDistance(userLocation.lat, userLocation.lng, b.lat, b.lng),
+          );
+        }
+        return filtered;
       }
 
       function updateMapMarkers() {
         if (!map || !markersLayer) return;
         markersLayer.clearLayers();
-
         const bounds = [];
-
-        // أخذ نتائج البحث في الاعتبار
-        const query = normalizeArabicText(
-          document.getElementById("search-input").value,
-        );
-        const filteredMosques = globalMosques.filter((m) =>
-          normalizeArabicText(m.name).includes(query),
-        );
+        const filteredMosques = getFilteredAndSortedMosques();
 
         filteredMosques.forEach((mosque) => {
           const isSelected = selectedMosqueId === mosque.id;
-
           const icon = L.divIcon({
             html: `<div class="custom-marker ${isSelected ? "selected" : ""}" style="width: ${isSelected ? "35px" : "25px"}; height: ${isSelected ? "35px" : "25px"};"></div>`,
             className: "",
@@ -569,8 +765,9 @@
           bounds.push([mosque.lat, mosque.lng]);
         });
 
-        // ضبط العرض ليحتوي العلامات
-        if (!selectedMosqueId && bounds.length > 0 && !isSearchActive) {
+        const queryLength =
+          document.getElementById("search-input").value.length;
+        if (!selectedMosqueId && bounds.length > 0 && queryLength === 0) {
           try {
             map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
           } catch (e) {}
@@ -579,69 +776,171 @@
 
       function renderUserMosques() {
         const container = document.getElementById("mosques-list-container");
-        const query = normalizeArabicText(
-          document.getElementById("search-input").value,
-        );
-
-        const filtered = globalMosques.filter((m) =>
-          normalizeArabicText(m.name).includes(query),
-        );
+        const filtered = getFilteredAndSortedMosques();
 
         if (filtered.length === 0) {
-          container.innerHTML = `<div class="text-center text-gray-500 mt-10"><i class="fa-solid fa-folder-open mb-2 text-2xl text-gray-300 block"></i>لا توجد نتائج.</div>`;
+          container.innerHTML = `<div class="text-center text-gray-500 mt-10"><i class="fa-solid fa-folder-open mb-2 text-3xl text-gray-300 block"></i>لا توجد نتائج مطابقة لبحثك.</div>`;
           return;
         }
 
         container.innerHTML = filtered
           .map((mosque) => {
             const isSelected = selectedMosqueId === mosque.id;
+            let detailsHtml = "";
+            if (mosque.neighborhood)
+              detailsHtml += `<div class="text-xs text-gray-500 mb-1"><i class="fa-solid fa-map-pin w-4 text-center"></i> حي ${mosque.neighborhood}</div>`;
+            if (mosque.imam)
+              detailsHtml += `<div class="text-xs text-emerald-600 mb-1 font-semibold"><i class="fa-solid fa-user-tie w-4 text-center"></i> الإمام: ${mosque.imam}</div>`;
+            if (mosque.speech)
+              detailsHtml += `<div class="text-xs text-blue-600 mb-2"><i class="fa-solid fa-microphone w-4 text-center"></i> ${mosque.speech}</div>`;
+
             const lecturesHtml =
               mosque.lectures && mosque.lectures.length > 0
                 ? `<div class="mt-3 space-y-2 border-t pt-2 border-gray-100">
-                        ${mosque.lectures
-                          .map(
-                            (lec) => `
-                            <div class="bg-slate-50 rounded-lg p-2 text-sm border border-gray-200">
-                                <div class="font-bold text-emerald-700">${lec.title}</div>
-                                <div class="text-gray-600 flex items-center gap-1 mt-1 text-xs"><i class="fa-solid fa-user-tie text-emerald-500"></i> ${lec.speaker}</div>
-                                <div class="flex flex-wrap items-center gap-3 mt-1 text-gray-500 text-xs">
-                                    <span><i class="fa-regular fa-calendar"></i> ${lec.date}</span>
-                                    <span><i class="fa-regular fa-clock"></i> ${lec.time}</span>
-                                </div>
-                            </div>
-                        `,
-                          )
-                          .join("")}
-                       </div>`
-                : `<div class="text-xs text-gray-400 mt-2"><i class="fa-solid fa-info-circle"></i> لا توجد محاضرات حالياً.</div>`;
+                  ${mosque.lectures
+                    .map(
+                      (lec) => `
+                    <div class="bg-slate-50 rounded-lg p-2 text-sm border border-gray-200">
+                        <div class="font-bold text-emerald-700">${lec.title}</div>
+                        <div class="text-gray-600 flex items-center gap-1 mt-1 text-xs"><i class="fa-solid fa-user text-emerald-500"></i> ${lec.speaker}</div>
+                        <div class="flex flex-wrap items-center gap-3 mt-1 text-gray-500 text-xs">
+                            <span><i class="fa-regular fa-calendar"></i> ${lec.date}</span>
+                            <span><i class="fa-regular fa-clock"></i> ${lec.time}</span>
+                        </div>
+                    </div>`,
+                    )
+                    .join("")}
+               </div>`
+                : `<div class="text-[11px] text-gray-400 mt-2"><i class="fa-solid fa-info-circle"></i> لا توجد محاضرات مجدولة حالياً.</div>`;
+
+            const directionsBtn = `<a href="https://www.google.com/maps/dir/?api=1&destination=${mosque.lat},${mosque.lng}" target="_blank" onclick="event.stopPropagation()" class="text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full text-xs font-bold transition-colors flex items-center gap-1 border border-blue-100"><i class="fa-solid fa-diamond-turn-right"></i> الاتجاهات</a>`;
 
             return `
-                <div onclick="selectMosque('${mosque.id}')" class="bg-white p-4 rounded-xl shadow-sm border transition-all cursor-pointer hover:shadow-md ${isSelected ? "border-emerald-500 ring-1 ring-emerald-500" : "border-gray-100"}">
-                    <div class="flex justify-between items-start mb-2">
-                        <h3 class="font-bold text-gray-800 flex items-center gap-2 text-sm md:text-base">
-                            <i class="fa-solid fa-location-dot text-emerald-600"></i> ${mosque.name}
-                        </h3>
-                        <span class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-1 rounded-full whitespace-nowrap">
-                            ${(mosque.lectures || []).length} محاضرات
-                        </span>
-                    </div>
-                    ${lecturesHtml}
-                </div>`;
+            <div onclick="selectMosque('${mosque.id}')" class="bg-white p-4 rounded-xl shadow-sm border transition-all cursor-pointer hover:shadow-md ${isSelected ? "border-emerald-500 ring-1 ring-emerald-500" : "border-gray-100"}">
+                <div class="flex justify-between items-start mb-3">
+                    <h3 class="font-bold text-gray-800 text-sm md:text-base pr-1">
+                        <i class="fa-solid fa-mosque text-emerald-600 ml-1"></i> ${mosque.name}
+                    </h3>
+                    ${directionsBtn}
+                </div>
+                ${detailsHtml}
+                ${lecturesHtml}
+            </div>`;
           })
           .join("");
       }
 
-      document.getElementById("search-input").addEventListener("input", (e) => {
-        isSearchActive = e.target.value.length > 0;
+      document.getElementById("search-input").addEventListener("input", () => {
         renderUserMosques();
         updateMapMarkers();
       });
+
+      document.getElementById("sort-filter").addEventListener("change", (e) => {
+        if (e.target.value === "nearest") {
+          if (!userLocation) {
+            showToast("جاري تحديد موقعك...");
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                userLocation = {
+                  lat: pos.coords.latitude,
+                  lng: pos.coords.longitude,
+                };
+                renderUserMosques();
+                updateMapMarkers();
+              },
+              (err) => {
+                showToast("يرجى تفعيل صلاحية الموقع لمعرفة الأقرب", true);
+                e.target.value = "all";
+                renderUserMosques();
+                updateMapMarkers();
+              },
+            );
+          } else {
+            renderUserMosques();
+            updateMapMarkers();
+          }
+        } else {
+          renderUserMosques();
+          updateMapMarkers();
+        }
+      });
+
+      window.selectMosque = (id) => {
+        selectedMosqueId = id;
+        renderUserMosques();
+        updateMapMarkers();
+        const m = globalMosques.find((x) => x.id === id);
+        if (m && map) {
+          map.flyTo([m.lat, m.lng], 16, { duration: 1 });
+          if (window.innerWidth < 768)
+            document.getElementById("sidebar").style.height = "50vh";
+        }
+      };
+
+      window.sendFeedback = async () => {
+        const text = document.getElementById("feedback-text").value;
+        if (!text.trim()) return showToast("الرجاء كتابة رسالة أولاً", true);
+        try {
+          await addDoc(feedbackCollectionRef, {
+            text,
+            date: new Date().toISOString(),
+          });
+          showToast("تم إرسال رسالتك للإدارة بنجاح، شكراً لك");
+          document.getElementById("feedback-text").value = "";
+          document.getElementById("feedback-modal").classList.add("hidden");
+        } catch (e) {
+          showToast("حدث خطأ في الإرسال", true);
+        }
+      };
+
+      let clickCount = 0;
+      let clickTimer;
+      const ADMIN_USER = "admin";
+      const ADMIN_PASS = "12345";
+
+      document
+        .getElementById("secret-admin-trigger")
+        .addEventListener("click", () => {
+          clickCount++;
+          clearTimeout(clickTimer);
+          clickTimer = setTimeout(() => {
+            clickCount = 0;
+          }, 2000);
+
+          if (clickCount === 5) {
+            clickCount = 0;
+            const enteredUser = prompt("الرجاء إدخال اسم المستخدم:");
+            if (enteredUser === ADMIN_USER) {
+              const enteredPass = prompt("الرجاء إدخال كلمة المرور:");
+              if (enteredPass === ADMIN_PASS) {
+                const toggleBtn = document.getElementById("toggle-view-btn");
+                toggleBtn.classList.remove("hidden");
+                showToast("تم تفعيل صلاحيات الإدارة بنجاح");
+              } else if (enteredPass !== null) {
+                showToast("كلمة المرور خاطئة!", true);
+              }
+            } else if (enteredUser !== null) {
+              showToast("اسم المستخدم غير صحيح!", true);
+            }
+          }
+        });
+
+      window.adminSelectMosque = (id) => {
+        adminSelectedMosqueId = id;
+        renderAdminLecturesSection();
+      };
 
       document
         .getElementById("add-mosque-form")
         .addEventListener("submit", async (e) => {
           e.preventDefault();
           const name = document.getElementById("new-mosque-name").value;
+          const date = document.getElementById("new-mosque-date").value;
+          const neighborhood = document.getElementById(
+            "new-mosque-neighborhood",
+          ).value;
+          const imam = document.getElementById("new-mosque-imam").value;
+          const speech = document.getElementById("new-mosque-speech").value;
           const lat = parseFloat(
             document.getElementById("new-mosque-lat").value,
           );
@@ -649,16 +948,18 @@
             document.getElementById("new-mosque-lng").value,
           );
 
-          if (!name || isNaN(lat) || isNaN(lng)) return;
-
+          if (!name || !date || isNaN(lat) || isNaN(lng)) return;
           const btn = e.target.querySelector("button");
-          const originalText = btn.innerText;
           btn.innerText = "جاري الحفظ...";
           btn.disabled = true;
 
           try {
             await addDoc(mosquesCollectionRef, {
               name,
+              date,
+              neighborhood,
+              imam,
+              speech,
               lat,
               lng,
               lectures: [],
@@ -666,10 +967,9 @@
             showToast("تمت إضافة الجامع بنجاح");
             e.target.reset();
           } catch (err) {
-            console.error(err);
             showToast("فشل إضافة الجامع", true);
           } finally {
-            btn.innerText = originalText;
+            btn.innerText = "حفظ الجامع";
             btn.disabled = false;
           }
         });
@@ -683,7 +983,7 @@
               await deleteDoc(
                 doc(db, "artifacts", appId, "public", "data", "mosques", id),
               );
-              showToast("تم حذف الجامع بنجاح");
+              showToast("تم الحذف بنجاح");
               if (selectedMosqueId === id) selectedMosqueId = null;
               if (adminSelectedMosqueId === id) adminSelectedMosqueId = null;
             } catch (e) {
@@ -696,80 +996,71 @@
       function renderAdminMosquesTable() {
         const tbody = document.getElementById("admin-mosques-table-body");
         if (globalMosques.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="4" class="text-center p-6 text-gray-500">لا يوجد جوامع مسجلة حالياً.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="3" class="text-center p-6 text-gray-500">لا يوجد جوامع.</td></tr>`;
           return;
         }
-
         tbody.innerHTML = globalMosques
           .map(
             (m) => `
-                <tr class="border-b border-gray-100 hover:bg-gray-50">
-                    <td class="p-3 font-semibold text-gray-800">${m.name}</td>
-                    <td class="p-3 text-sm text-gray-500" dir="ltr">${m.lat.toFixed(4)}, ${m.lng.toFixed(4)}</td>
-                    <td class="p-3 text-sm"><span class="bg-emerald-100 text-emerald-800 px-2 py-1 rounded-full">${(m.lectures || []).length}</span></td>
-                    <td class="p-3 text-center">
-                        <button onclick="deleteMosque('${m.id}')" class="text-red-500 hover:bg-red-100 p-2 rounded-lg transition-colors" title="حذف الجامع"><i class="fa-solid fa-trash-can"></i></button>
-                    </td>
-                </tr>
-            `,
+          <tr class="border-b border-gray-100 hover:bg-gray-50">
+              <td class="p-3">
+                  <div class="font-bold text-gray-800">${m.name}</div>
+                  ${m.neighborhood ? `<div class="text-xs text-gray-500">حي ${m.neighborhood}</div>` : ""}
+                  ${m.imam ? `<div class="text-xs text-emerald-600">الإمام: ${m.imam}</div>` : ""}
+              </td>
+              <td class="p-3 text-sm text-gray-500" dir="ltr">${m.lat.toFixed(4)}, ${m.lng.toFixed(4)}</td>
+              <td class="p-3 text-center">
+                  <button onclick="deleteMosque('${m.id}')" class="text-red-500 hover:bg-red-100 p-2 rounded-lg transition-colors"><i class="fa-solid fa-trash-can"></i></button>
+              </td>
+          </tr>`,
           )
           .join("");
       }
 
       function renderAdminLecturesSection() {
-        // 1. تحديث قائمة الجوامع في الجانب
         const listContainer = document.getElementById(
           "admin-lectures-mosques-list",
         );
         if (globalMosques.length === 0) {
-          listContainer.innerHTML = `<p class="text-gray-500 text-sm p-2">أضف جوامع أولاً من تبويب (إدارة الجوامع).</p>`;
+          listContainer.innerHTML = `<p class="text-gray-500 text-sm p-2">أضف جوامع أولاً.</p>`;
         } else {
           listContainer.innerHTML = globalMosques
             .map(
-              (m) => `
-                    <button onclick="adminSelectMosque('${m.id}')" class="w-full text-right p-3 rounded-lg border transition-all mb-2 ${adminSelectedMosqueId === m.id ? "bg-emerald-50 border-emerald-500 text-emerald-800 font-bold" : "bg-white border-gray-200 hover:border-emerald-300"}">
-                        ${m.name}
-                    </button>
-                `,
+              (m) =>
+                `<button onclick="adminSelectMosque('${m.id}')" class="w-full text-right p-3 rounded-lg border transition-all mb-2 ${adminSelectedMosqueId === m.id ? "bg-emerald-50 border-emerald-500 text-emerald-800 font-bold" : "bg-white border-gray-200 hover:border-emerald-300"}">${m.name}</button>`,
             )
             .join("");
         }
-
-        // 2. تحديث قسم الإدارة الرئيسي بناء على الاختيار
-        const mngArea = document.getElementById("lecture-management-area");
-        const emptyArea = document.getElementById("lecture-management-empty");
-
+        const mngArea = document.getElementById("lecture-management-area"),
+          emptyArea = document.getElementById("lecture-management-empty");
         if (adminSelectedMosqueId) {
           mngArea.classList.remove("hidden");
           emptyArea.classList.add("hidden");
-
           const selectedMosque = globalMosques.find(
             (x) => x.id === adminSelectedMosqueId,
           );
           const lecturesList = document.getElementById("admin-lectures-list");
-
           if (
             !selectedMosque ||
             !selectedMosque.lectures ||
             selectedMosque.lectures.length === 0
           ) {
-            lecturesList.innerHTML = `<p class="text-gray-500 text-center py-6 bg-white rounded-lg border border-dashed border-gray-300">لا توجد محاضرات حالياً في هذا الجامع.</p>`;
+            lecturesList.innerHTML = `<p class="text-gray-500 text-center py-6 bg-white rounded-lg border border-dashed border-gray-300">لا توجد محاضرات.</p>`;
           } else {
             lecturesList.innerHTML = selectedMosque.lectures
               .map(
                 (lec) => `
-                        <div class="bg-white p-4 rounded-lg border border-gray-200 flex justify-between items-center hover:shadow-sm transition-shadow">
-                            <div>
-                                <h4 class="font-bold text-gray-800 text-base md:text-lg">${lec.title}</h4>
-                                <p class="text-sm text-gray-600 mt-1 flex items-center gap-2"><i class="fa-solid fa-user-tie"></i> ${lec.speaker}</p>
-                                <div class="flex flex-wrap gap-4 mt-2 text-xs text-gray-500">
-                                    <span><i class="fa-regular fa-calendar"></i> ${lec.date}</span>
-                                    <span><i class="fa-regular fa-clock"></i> ${lec.time}</span>
-                                </div>
-                            </div>
-                            <button onclick="deleteLecture('${selectedMosque.id}', '${lec.id}')" class="text-red-500 hover:bg-red-50 p-3 rounded-full transition-colors"><i class="fa-solid fa-trash-can"></i></button>
-                        </div>
-                    `,
+              <div class="bg-white p-4 rounded-lg border border-gray-200 flex justify-between items-center hover:shadow-sm">
+                  <div>
+                      <h4 class="font-bold text-gray-800 text-base md:text-lg">${lec.title}</h4>
+                      <p class="text-sm text-gray-600 mt-1 flex items-center gap-2"><i class="fa-solid fa-user-tie"></i> ${lec.speaker}</p>
+                      <div class="flex gap-4 mt-2 text-xs text-gray-500">
+                          <span><i class="fa-regular fa-calendar"></i> ${lec.date}</span>
+                          <span><i class="fa-regular fa-clock"></i> ${lec.time}</span>
+                      </div>
+                  </div>
+                  <button onclick="deleteLecture('${selectedMosque.id}', '${lec.id}')" class="text-red-500 hover:bg-red-50 p-3 rounded-full"><i class="fa-solid fa-trash-can"></i></button>
+              </div>`,
               )
               .join("");
           }
@@ -784,14 +1075,11 @@
         .addEventListener("submit", async (e) => {
           e.preventDefault();
           if (!adminSelectedMosqueId) return;
-
           const title = document.getElementById("new-lecture-title").value;
           const speaker = document.getElementById("new-lecture-speaker").value;
           const date = document.getElementById("new-lecture-date").value;
           const time = document.getElementById("new-lecture-time").value;
-
           const btn = e.target.querySelector("button");
-          const originalText = btn.innerText;
           btn.innerText = "جاري الحفظ...";
           btn.disabled = true;
 
@@ -803,7 +1091,6 @@
               ...(mosque.lectures || []),
               { id: Date.now().toString(), title, speaker, date, time },
             ];
-
             await updateDoc(
               doc(
                 db,
@@ -814,18 +1101,14 @@
                 "mosques",
                 adminSelectedMosqueId,
               ),
-              {
-                lectures: newLectures,
-              },
+              { lectures: newLectures },
             );
-
-            showToast("تمت إضافة المحاضرة بنجاح");
+            showToast("تم الحفظ بنجاح");
             e.target.reset();
           } catch (err) {
-            console.error(err);
-            showToast("فشل إضافة المحاضرة", true);
+            showToast("فشل الحفظ", true);
           } finally {
-            btn.innerText = originalText;
+            btn.innerText = "حفظ المحاضرة";
             btn.disabled = false;
           }
         });
@@ -833,7 +1116,7 @@
       window.deleteLecture = async (mosqueId, lectureId) => {
         showCustomModal(
           "تأكيد الحذف",
-          "هل أنت متأكد من حذف هذه المحاضرة؟",
+          "هل أنت متأكد من حذف المحاضرة؟",
           async () => {
             try {
               const mosque = globalMosques.find((x) => x.id === mosqueId);
@@ -850,11 +1133,9 @@
                   "mosques",
                   mosqueId,
                 ),
-                {
-                  lectures: newLectures,
-                },
+                { lectures: newLectures },
               );
-              showToast("تم حذف المحاضرة");
+              showToast("تم الحذف");
             } catch (e) {
               showToast("فشل الحذف", true);
             }
@@ -862,128 +1143,310 @@
         );
       };
 
-      // إدارة التبديل بين الشاشات
+      function renderAdminFeedback() {
+        const container = document.getElementById("feedback-admin-list");
+        if (globalFeedback.length === 0) {
+          container.innerHTML = `<p class="text-gray-500 text-center py-10">لا توجد رسائل حالياً.</p>`;
+          return;
+        }
+        container.innerHTML = globalFeedback
+          .map((fb) => {
+            const d = new Date(fb.date);
+            return `
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <div class="flex justify-between text-xs text-gray-500 mb-2 border-b border-gray-200 pb-2">
+                    <span><i class="fa-regular fa-clock"></i> ${d.toLocaleDateString("ar-SA")} - ${d.toLocaleTimeString("ar-SA")}</span>
+                </div>
+                <p class="text-gray-800 text-sm whitespace-pre-wrap">${fb.text}</p>
+            </div>
+            `;
+          })
+          .join("");
+      }
+
+      window.printLogReport = () => {
+        const startDate = document.getElementById("report-start-date").value;
+        const endDate = document.getElementById("report-end-date").value;
+
+        let htmlContent = `
+         <!DOCTYPE html>
+         <html lang="ar" dir="rtl">
+         <head>
+            <meta charset="UTF-8">
+            <title>تقرير الأنشطة الدعوية</title>
+            <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+            <style>
+                :root {
+                    --primary-color: #064e3b; 
+                    --gold-color: #b45309; 
+                }
+                body { 
+                    font-family: 'Cairo', sans-serif; 
+                    background-color: #f8fafc; 
+                    color: #1f2937; 
+                    margin: 0; 
+                    padding: 0;
+                }
+                .report-container {
+                    max-width: 210mm; 
+                    margin: 20px auto;
+                    background: #fff;
+                    padding: 40px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+                    border-top: 8px solid var(--primary-color);
+                }
+                .header {
+                    text-align: center;
+                    border-bottom: 2px solid var(--gold-color);
+                    padding-bottom: 20px;
+                    margin-bottom: 30px;
+                }
+                .header h1 {
+                    font-family: 'Amiri', serif;
+                    color: var(--primary-color);
+                    font-size: 34px;
+                    margin: 0 0 10px 0;
+                }
+                .header p {
+                    color: #4b5563;
+                    font-size: 16px;
+                    margin: 5px 0;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 20px;
+                }
+                th {
+                    background-color: var(--primary-color);
+                    color: white;
+                    padding: 15px;
+                    text-align: right;
+                    font-weight: 600;
+                    font-size: 15px;
+                    border: 1px solid var(--primary-color);
+                }
+                td {
+                    padding: 15px;
+                    border: 1px solid #e2e8f0;
+                    font-size: 14px;
+                    vertical-align: top;
+                }
+                tr:nth-child(even) {
+                    background-color: #f8fafc;
+                }
+                .mosque-name {
+                    font-weight: 700;
+                    color: var(--primary-color);
+                    font-size: 16px;
+                }
+                .footer {
+                    margin-top: 50px;
+                    padding-top: 20px;
+                    border-top: 1px solid #e2e8f0;
+                    text-align: center;
+                    font-size: 14px;
+                    color: #64748b;
+                }
+                .approval {
+                    margin-top: 15px;
+                    font-family: 'Amiri', serif;
+                    font-size: 18px;
+                    color: var(--primary-color);
+                    font-weight: bold;
+                }
+                .print-btn-container {
+                    text-align: center;
+                    margin-bottom: 20px;
+                }
+                .print-btn {
+                    background-color: var(--primary-color);
+                    color: white;
+                    border: none;
+                    padding: 12px 30px;
+                    font-size: 16px;
+                    font-family: 'Cairo', sans-serif;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-weight: bold;
+                    transition: all 0.3s ease;
+                }
+                .print-btn:hover { background-color: #047857; }
+                @media print {
+                    body { background-color: #fff; }
+                    .report-container { box-shadow: none; margin: 0; padding: 0; max-width: 100%; border-top: none; }
+                    .print-btn-container { display: none; }
+                    * { -webkit-print-color-adjust: exact !important; color-adjust: exact !important; }
+                }
+            </style>
+         </head>
+         <body>
+            <div class="print-btn-container">
+                <button class="print-btn" onclick="window.print()">🖨️ طباعة التقرير</button>
+            </div>
+            <div class="report-container">
+                <div class="header">
+                    <h1>دليل المحاضرات والجوامع</h1>
+                    <p>التقرير الرسمي للأنشطة الدعوية والدروس العلمية</p>
+         `;
+
+        if (startDate && endDate) {
+          htmlContent += `<p style="font-weight: 600; color: var(--primary-color);">للفترة من: ${startDate} — إلى: ${endDate}</p>`;
+        } else if (startDate) {
+          htmlContent += `<p style="font-weight: 600; color: var(--primary-color);">للفترة من: ${startDate} فصاعداً</p>`;
+        } else if (endDate) {
+          htmlContent += `<p style="font-weight: 600; color: var(--primary-color);">للفترة حتى: ${endDate}</p>`;
+        } else {
+          htmlContent += `<p style="font-weight: 600; color: var(--primary-color);">تقرير شامل لجميع الأوقات</p>`;
+        }
+        htmlContent += `</div>`;
+
+        htmlContent += `
+            <table>
+                <thead>
+                    <tr>
+                        <th>الجامع / المسجد</th>
+                        <th>النشاط العلمي</th>
+                        <th>التاريخ والوقت</th>
+                    </tr>
+                </thead>
+                <tbody>
+         `;
+
+        let hasData = false;
+
+        globalMosques.forEach((mosque) => {
+          if (mosque.speech && mosque.speech.trim() !== "") {
+            hasData = true;
+            htmlContent += `
+                     <tr>
+                         <td class="mosque-name">${mosque.name}</td>
+                         <td><span style="color: var(--gold-color); font-weight: bold;">(كلمة مستمرة)</span><br>${mosque.speech}</td>
+                         <td style="color:#666;">مستمر</td>
+                     </tr>
+                 `;
+          }
+
+          if (mosque.lectures && mosque.lectures.length > 0) {
+            mosque.lectures.forEach((lec) => {
+              let includeLec = true;
+              if (startDate && lec.date < startDate) includeLec = false;
+              if (endDate && lec.date > endDate) includeLec = false;
+
+              if (includeLec) {
+                hasData = true;
+                htmlContent += `
+                             <tr>
+                                 <td class="mosque-name">${mosque.name}</td>
+                                 <td><strong>${lec.title}</strong><br><span style="color: var(--primary-color);">الشيخ: ${lec.speaker}</span></td>
+                                 <td dir="rtl">${lec.date} <br> ${lec.time}</td>
+                             </tr>
+                         `;
+              }
+            });
+          }
+        });
+
+        htmlContent += `</tbody></table>`;
+
+        if (!hasData) {
+          htmlContent += `
+            <div style="text-align: center; padding: 40px; color: #dc2626; border: 1px dashed #dc2626; margin-top: 20px; border-radius: 8px;">
+                <strong>لا توجد بيانات مطابقة لهذا النطاق الزمني.</strong>
+            </div>`;
+        }
+
+        htmlContent += `
+                <div class="footer">
+                    <p>تم استخراج هذا التقرير آلياً من النظام لتوثيق الجدولة الزمنية.</p>
+                    <div class="approval">
+                        ✨ تمت الموافقة عليه من قبل دكاترة في جامعة الملك خالد ✨
+                    </div>
+                </div>
+            </div>
+         <\/body>
+         <\/html>
+         `;
+
+        const printWin = window.open("", "", "width=1000,height=800");
+        printWin.document.write(htmlContent);
+        printWin.document.close();
+      };
+
       let currentView = "user";
       document
         .getElementById("toggle-view-btn")
         .addEventListener("click", () => {
           currentView = currentView === "user" ? "admin" : "user";
-
           const btn = document.getElementById("toggle-view-btn");
           const userView = document.getElementById("user-view");
           const adminView = document.getElementById("admin-view");
 
           if (currentView === "admin") {
-            btn.innerHTML = `<i class="fa-solid fa-users"></i>`;
-            btn.title = "العودة لواجهة المستخدم";
+            btn.innerHTML = `<i class="fa-solid fa-users text-xl"></i>`;
+            btn.title = "العودة للواجهة الرئيسية";
             userView.classList.add("hidden");
             adminView.classList.remove("hidden");
           } else {
-            btn.innerHTML = `<i class="fa-solid fa-shield-halved"></i>`;
+            btn.innerHTML = `<i class="fa-solid fa-shield-halved text-xl"></i>`;
             btn.title = "دخول الإدارة";
             adminView.classList.add("hidden");
             userView.classList.remove("hidden");
-            // تحديث الخريطة عند العودة لأنها قد تتأثر بكونها مخفية
-            setTimeout(() => {
-              map.invalidateSize();
-            }, 300);
+            setTimeout(() => map.invalidateSize(), 300);
           }
         });
 
-      // إدارة التبديل بين تابات الإدارة
-      document
-        .getElementById("tab-mosques-btn")
-        .addEventListener("click", (e) => {
-          e.target.classList.add(
-            "bg-white",
-            "text-emerald-700",
-            "border-b-2",
-            "border-emerald-500",
-          );
-          e.target.classList.remove("text-gray-500", "hover:bg-gray-100");
-
-          const lecBtn = document.getElementById("tab-lectures-btn");
-          lecBtn.classList.remove(
-            "bg-white",
-            "text-emerald-700",
-            "border-b-2",
-            "border-emerald-500",
-          );
-          lecBtn.classList.add("text-gray-500", "hover:bg-gray-100");
-
-          document
-            .getElementById("admin-mosques-section")
-            .classList.replace("hidden", "block");
-          document
-            .getElementById("admin-lectures-section")
-            .classList.replace("block", "hidden");
+      window.switchTab = (tabName) => {
+        const tabs = ["mosques", "lectures", "log", "feedback"];
+        tabs.forEach((t) => {
+          const btn = document.getElementById(`tab-${t}-btn`);
+          const sec = document.getElementById(`admin-${t}-section`);
+          if (t === tabName) {
+            btn.classList.add(
+              "bg-white",
+              "text-emerald-700",
+              "border-b-2",
+              "border-emerald-500",
+            );
+            btn.classList.remove("text-gray-500", "hover:bg-gray-100");
+            sec.classList.remove("hidden");
+            sec.classList.add("block");
+          } else {
+            btn.classList.remove(
+              "bg-white",
+              "text-emerald-700",
+              "border-b-2",
+              "border-emerald-500",
+            );
+            btn.classList.add("text-gray-500", "hover:bg-gray-100");
+            sec.classList.remove("block");
+            sec.classList.add("hidden");
+          }
         });
+      };
 
-      document
-        .getElementById("tab-lectures-btn")
-        .addEventListener("click", (e) => {
-          e.target.classList.add(
-            "bg-white",
-            "text-emerald-700",
-            "border-b-2",
-            "border-emerald-500",
-          );
-          e.target.classList.remove("text-gray-500", "hover:bg-gray-100");
-
-          const mosBtn = document.getElementById("tab-mosques-btn");
-          mosBtn.classList.remove(
-            "bg-white",
-            "text-emerald-700",
-            "border-b-2",
-            "border-emerald-500",
-          );
-          mosBtn.classList.add("text-gray-500", "hover:bg-gray-100");
-
-          document
-            .getElementById("admin-lectures-section")
-            .classList.replace("hidden", "block");
-          document
-            .getElementById("admin-mosques-section")
-            .classList.replace("block", "hidden");
-        });
-
-      // نافذة تأكيد منبثقة بديلة لـ alert()
       function showCustomModal(title, message, onConfirm) {
-        // إنشاء الـ Modal
         const overlay = document.createElement("div");
         overlay.className =
           "fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center backdrop-blur-sm transition-opacity opacity-0";
-
         const modal = document.createElement("div");
         modal.className =
           "bg-white p-6 rounded-2xl shadow-xl w-11/12 max-w-sm transform scale-90 transition-all font-cairo";
-
-        modal.innerHTML = `
-                <h3 class="text-lg font-bold text-gray-800 mb-2">${title}</h3>
-                <p class="text-gray-600 mb-6">${message}</p>
-                <div class="flex justify-end gap-3">
-                    <button id="modal-cancel" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">إلغاء</button>
-                    <button id="modal-confirm" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-bold">تأكيد</button>
-                </div>
-            `;
-
+        modal.innerHTML = `<h3 class="text-lg font-bold text-gray-800 mb-2">${title}</h3><p class="text-gray-600 mb-6">${message}</p><div class="flex justify-end gap-3"><button id="modal-cancel" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">إلغاء</button><button id="modal-confirm" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-bold">تأكيد</button></div>`;
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
-
-        // تحريك الدخول
         requestAnimationFrame(() => {
           overlay.classList.remove("opacity-0");
           modal.classList.remove("scale-90");
           modal.classList.add("scale-100");
         });
-
         const close = () => {
           overlay.classList.add("opacity-0");
           modal.classList.remove("scale-100");
           modal.classList.add("scale-90");
           setTimeout(() => overlay.remove(), 200);
         };
-
         modal.querySelector("#modal-cancel").onclick = close;
         modal.querySelector("#modal-confirm").onclick = () => {
           onConfirm();
@@ -991,11 +1454,9 @@
         };
       }
 
-      // --- ميزة جعل القائمة مرنة (السحب للتكبير والتصغير) ---
-      const resizer = document.getElementById("resizer");
-      const sidebar = document.getElementById("sidebar");
+      const resizer = document.getElementById("resizer"),
+        sidebar = document.getElementById("sidebar");
       let isResizing = false;
-
       resizer.addEventListener("mousedown", () => {
         isResizing = true;
         document.body.style.userSelect = "none";
@@ -1008,23 +1469,19 @@
         },
         { passive: true },
       );
-
       window.addEventListener("mousemove", (e) => {
         if (!isResizing) return;
         if (window.innerWidth >= 768) {
-          // وضع الكمبيوتر: تغيير العرض
           let newWidth = window.innerWidth - e.clientX;
           if (newWidth > 280 && newWidth < window.innerWidth - 200)
             sidebar.style.width = newWidth + "px";
         } else {
-          // وضع الجوال: تغيير الارتفاع
           let newHeight = window.innerHeight - e.clientY;
           if (newHeight > 100 && newHeight < window.innerHeight - 150)
             sidebar.style.height = newHeight + "px";
         }
         if (map) map.invalidateSize();
       });
-
       window.addEventListener(
         "touchmove",
         (e) => {
@@ -1036,7 +1493,6 @@
         },
         { passive: true },
       );
-
       const stopResize = () => {
         if (isResizing) {
           isResizing = false;
@@ -1047,57 +1503,6 @@
       window.addEventListener("mouseup", stopResize);
       window.addEventListener("touchend", stopResize);
 
-      // بيانات تجريبية يتم إضافتها في حال كانت قاعدة البيانات فارغة تماماً
-      async function seedInitialData() {
-        const seedData = [
-          {
-            name: "جامع الملك فيصل",
-            lat: 18.2164,
-            lng: 42.5053,
-            lectures: [
-              {
-                id: "L1",
-                title: "تفسير سورة النور",
-                speaker: "الشيخ د. أحمد العبدالله",
-                date: "2026-07-15",
-                time: "بعد صلاة المغرب",
-              },
-              {
-                id: "L2",
-                title: "أهمية الصلاة",
-                speaker: "الشيخ محمد بن زيد",
-                date: "2026-07-20",
-                time: "بعد صلاة العشاء",
-              },
-            ],
-          },
-          {
-            name: "جامع الراجحي",
-            lat: 18.225,
-            lng: 42.51,
-            lectures: [
-              {
-                id: "L3",
-                title: "شرح كتاب التوحيد",
-                speaker: "الشيخ خالد الفهد",
-                date: "2026-07-18",
-                time: "بعد صلاة العصر",
-              },
-            ],
-          },
-          { name: "مسجد النور", lat: 18.2, lng: 42.49, lectures: [] },
-        ];
-
-        try {
-          for (const item of seedData) {
-            await addDoc(mosquesCollectionRef, item);
-          }
-        } catch (e) {
-          console.error("Error seeding data:", e);
-        }
-      }
-
-      // تشغيل التطبيق
       initApp();
     </script>
   </body>
