@@ -38,7 +38,7 @@
         background: #059669;
       }
 
-      /* تصميم أيقونة الخريطة (الدائرة) الجديد والأنيق */
+      /* تصميم أيقونة الخريطة (الدائرة) */
       .custom-marker {
         background: linear-gradient(135deg, #10b981, #059669);
         border: 2px solid white;
@@ -60,7 +60,6 @@
         box-shadow: 0 8px 15px rgba(16, 185, 129, 0.6);
         border-color: #ecfdf5;
       }
-      /* تأثير النبض للمساجد التي بها كلمات/محاضرات */
       .marker-pulse {
         animation: pulse-ring 2s infinite;
       }
@@ -76,7 +75,7 @@
         }
       }
 
-      /* تنسيق البطاقة المنبثقة فوق الخريطة (Popup) */
+      /* تنسيق البطاقة المنبثقة (Popup) */
       .leaflet-popup-content-wrapper {
         border-radius: 16px;
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
@@ -88,9 +87,6 @@
         margin: 0;
         font-family: "Cairo", sans-serif;
         line-height: 1.6;
-      }
-      .leaflet-popup-tip {
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
       }
       .custom-popup .leaflet-popup-close-button {
         right: auto !important;
@@ -110,7 +106,6 @@
         padding: 4px !important;
       }
 
-      /* مؤشر الخريطة */
       .picker-crosshair {
         position: absolute;
         top: 50%;
@@ -123,22 +118,7 @@
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
       }
 
-      /* منطقة الإمساك المرنة الواسعة جداً */
-      #resizer {
-        position: relative;
-      }
-      #resizer::before {
-        content: "";
-        position: absolute;
-        top: -15px;
-        bottom: -15px;
-        left: -15px;
-        right: -15px;
-        z-index: 50;
-        cursor: inherit;
-      }
-
-      /* تصميم البطاقات المطور */
+      /* البطاقات */
       .mosque-card {
         background: linear-gradient(145deg, #ffffff, #f8fafc);
         border: 1px solid #f1f5f9;
@@ -164,7 +144,6 @@
       class="fixed top-20 left-1/2 transform -translate-x-1/2 z-[9999] flex flex-col gap-2 pointer-events-none"
     ></div>
 
-    <!-- الشريط العلوي -->
     <header
       class="bg-emerald-700 text-white p-4 shadow-md flex justify-between items-center z-20 shrink-0"
     >
@@ -235,7 +214,7 @@
       </div>
     </div>
 
-    <!-- بوابة المتعاونين (المصرح لهم) -->
+    <!-- بوابة المتعاونين -->
     <div
       id="contributor-modal"
       class="hidden fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center backdrop-blur-sm transition-opacity p-4 overflow-y-auto"
@@ -309,12 +288,20 @@
             placeholder="الكلمة المعتادة (اختياري)"
             class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-emerald-500"
           />
-          <input
-            type="text"
-            id="cont-mosque-permit"
-            placeholder="رقم الفسخ للكلمة (اختياري)"
-            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 bg-gray-50"
-          />
+          <div class="flex gap-4">
+            <input
+              type="datetime-local"
+              id="cont-mosque-speech-time"
+              class="w-1/2 p-3 border rounded-lg focus:ring-2 focus:ring-emerald-500"
+              title="وقت الكلمة (للإخفاء التلقائي)"
+            />
+            <input
+              type="text"
+              id="cont-mosque-permit"
+              placeholder="رقم الفسخ للكلمة (اختياري)"
+              class="w-1/2 p-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 bg-gray-50"
+            />
+          </div>
 
           <div
             class="bg-blue-50 p-4 rounded-lg flex flex-col md:flex-row items-center justify-between gap-3 border border-blue-100"
@@ -495,7 +482,7 @@
               class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <div>
+          <div class="md:col-span-2">
             <label class="block text-sm text-gray-600 mb-1"
               >الكلمة المعتادة</label
             >
@@ -503,6 +490,16 @@
               type="text"
               id="edit-mosque-speech"
               class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1"
+              >تاريخ ووقت الكلمة (للإخفاء التلقائي)</label
+            >
+            <input
+              type="datetime-local"
+              id="edit-mosque-speech-time"
+              class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50"
             />
           </div>
           <div>
@@ -574,7 +571,6 @@
         id="sidebar"
         class="w-full md:w-[400px] bg-white shadow-lg flex flex-col z-10 h-[45%] md:h-full order-3 md:order-1 shrink-0 transition-all duration-300"
       >
-        <!-- التعديل هنا لتغيير نشاط بكلمة -->
         <div
           id="stats-bar"
           class="px-4 py-3 bg-emerald-700 text-white flex justify-around text-sm font-bold shrink-0 shadow-inner"
@@ -632,13 +628,19 @@
         </div>
       </div>
 
-      <!-- منطقة السحب الموسعة -->
+      <!-- منطقة السحب الموسعة جداً لراحة المستخدم -->
       <div
         id="resizer"
-        class="resizer-zone bg-gray-200 z-20 cursor-row-resize md:cursor-col-resize order-2 flex items-center justify-center shrink-0"
+        class="w-4 h-4 md:w-5 md:h-full bg-gray-200 z-20 cursor-row-resize md:cursor-col-resize order-2 flex items-center justify-center shrink-0 hover:bg-emerald-300 transition-colors relative"
       >
+        <div class="flex md:flex-col gap-1 z-10">
+          <div class="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+          <div class="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+          <div class="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+        </div>
+        <!-- منطقة التقاط مخفية ضخمة لتسهيل الإمساك -->
         <div
-          class="w-10 h-1 md:w-1 md:h-10 bg-gray-400 rounded-full z-10"
+          class="absolute -inset-x-4 -inset-y-4 md:-inset-x-4 md:inset-y-0 z-0"
         ></div>
       </div>
 
@@ -754,7 +756,7 @@
                     class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
-                <div class="md:col-span-2">
+                <div class="md:col-span-4">
                   <label class="block text-sm text-gray-600 mb-1"
                     >الكلمة المعتادة (اختياري)</label
                   >
@@ -762,6 +764,17 @@
                     type="text"
                     id="new-mosque-speech"
                     class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div class="md:col-span-2">
+                  <label class="block text-sm text-gray-600 mb-1"
+                    >تاريخ ووقت الكلمة (للإخفاء التلقائي)</label
+                  >
+                  <input
+                    type="datetime-local"
+                    id="new-mosque-speech-time"
+                    class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white"
+                    title="سوف تختفي الكلمة تلقائياً بعد مرور نصف ساعة من هذا الوقت"
                   />
                 </div>
                 <div class="md:col-span-2">
@@ -1101,6 +1114,7 @@
               .toLowerCase()
               .trim()
           : "";
+
       const showToast = (message, isError = false) => {
         const container = document.getElementById("toast-container");
         const toast = document.createElement("div");
@@ -1129,15 +1143,25 @@
         return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
       }
 
+      // دالة لمعرفة هل الكلمة لا تزال نشطة (أقل من نصف ساعة على مرور الوقت المحدد)
+      function isSpeechActive(speechDatetime) {
+        if (!speechDatetime) return true; // إذا لم يحدد وقت، اعتبرها نشطة دائماً لتظهر
+        const speechTime = new Date(speechDatetime).getTime();
+        const now = Date.now();
+        const diffMinutes = (now - speechTime) / (1000 * 60);
+        return diffMinutes <= 30; // إرجاع صحيح فقط إذا لم يمر أكثر من 30 دقيقة
+      }
+
       function updateStatsBar() {
         document.getElementById("stats-mosques-count").innerText =
           globalMosques.length;
         document.getElementById("stats-lectures-count").innerText =
-          globalMosques.reduce(
-            (sum, m) =>
-              sum + (m.lectures?.length || 0) + (m.speech?.trim() ? 1 : 0),
-            0,
-          );
+          globalMosques.reduce((sum, m) => {
+            const activeLecs = m.lectures ? m.lectures.length : 0;
+            const activeSpeech =
+              m.speech?.trim() && isSpeechActive(m.speechDatetime) ? 1 : 0;
+            return sum + activeLecs + activeSpeech;
+          }, 0);
       }
 
       async function initApp() {
@@ -1260,14 +1284,9 @@
           )
           .addTo(map);
         markersLayer = L.layerGroup().addTo(map);
-        map.on("click", () => {
-          if (window.innerWidth < 768) {
-            document.getElementById("sidebar").style.height = "20vh";
-            setTimeout(() => map.invalidateSize(), 300);
-          }
-        });
       }
 
+      // --- التقاط الخريطة ---
       window.openMapPicker = (latId, lngId) => {
         targetLatInputId = latId;
         targetLngInputId = lngId;
@@ -1300,11 +1319,12 @@
         document.getElementById(targetLatInputId).value = c.lat.toFixed(6);
         document.getElementById(targetLngInputId).value = c.lng.toFixed(6);
         window.closeMapPicker();
-        showToast("تم الاعتماد");
+        showToast("تم اعتماد الإحداثيات");
       };
       window.closeMapPicker = () =>
         document.getElementById("map-picker-modal").classList.add("hidden");
 
+      // --- واجهة المستخدم الرئيسية ---
       function getFilteredMosques() {
         const q = normalizeArabicText(
           document.getElementById("search-input").value,
@@ -1314,10 +1334,13 @@
           const str = `${m.name || ""} ${m.imam || ""} ${m.speech || ""} ${m.neighborhood || ""} ${(m.lectures || []).map((l) => l.title + " " + l.speaker).join(" ")}`;
           return normalizeArabicText(str).includes(q);
         });
-        if (filterVal === "has_lectures")
+        if (filterVal === "has_lectures") {
           f = f.filter(
-            (m) => m.lectures?.length > 0 || m.speech?.trim() !== "",
+            (m) =>
+              m.lectures?.length > 0 ||
+              (m.speech?.trim() && isSpeechActive(m.speechDatetime)),
           );
+        }
         if (filterVal === "nearest" && userLocation)
           f.sort(
             (a, b) =>
@@ -1333,22 +1356,23 @@
         const bounds = [];
         getFilteredMosques().forEach((m) => {
           const isSel = selectedMosqueId === m.id;
+          const hasActiveSpeech =
+            m.speech?.trim() && isSpeechActive(m.speechDatetime);
           const hasActivity =
-            (m.lectures && m.lectures.length > 0) ||
-            (m.speech && m.speech.trim() !== "");
+            (m.lectures && m.lectures.length > 0) || hasActiveSpeech;
 
-          const iconHTML = `<div class="custom-marker ${isSel ? "selected" : ""} ${hasActivity && !isSel ? "marker-pulse" : ""}" style="width:${isSel ? 38 : 28}px; height:${isSel ? 38 : 28}px;"><i class="fa-solid fa-mosque"></i></div>`;
+          const iconHTML = `<div class="custom-marker ${isSel ? "selected" : ""} ${hasActivity && !isSel ? "marker-pulse" : ""}" style="width:${isSel ? 40 : 30}px; height:${isSel ? 40 : 30}px;"><i class="fa-solid fa-mosque"></i></div>`;
           const icon = L.divIcon({
             html: iconHTML,
             className: "",
-            iconSize: isSel ? [38, 38] : [28, 28],
-            iconAnchor: isSel ? [19, 19] : [14, 14],
+            iconSize: isSel ? [40, 40] : [30, 30],
+            iconAnchor: isSel ? [20, 20] : [15, 15],
           });
 
           let popupContent = `<div class="text-right p-1 min-w-[200px] max-w-[280px]">
-                <h4 class="font-bold text-emerald-700 text-sm border-b border-gray-200 pb-2 mb-2"><i class="fa-solid fa-mosque ml-1"></i> ${m.name}</h4>`;
-          if (m.speech)
-            popupContent += `<div class="text-[13px] text-blue-600 mb-2 font-semibold bg-blue-50 p-2 rounded-lg"><i class="fa-solid fa-microphone ml-1"></i> ${m.speech}</div>`;
+                <h4 class="font-bold text-emerald-700 text-[15px] border-b border-gray-200 pb-2 mb-2"><i class="fa-solid fa-mosque ml-1"></i> ${m.name}</h4>`;
+          if (hasActiveSpeech)
+            popupContent += `<div class="text-[13px] text-blue-600 mb-2 font-semibold bg-blue-50 p-2 rounded-lg border border-blue-100"><i class="fa-solid fa-microphone ml-1"></i> ${m.speech}</div>`;
           if (m.lectures && m.lectures.length > 0) {
             const nextLec = m.lectures[0];
             popupContent += `<div class="bg-gray-50 p-2 rounded-lg border border-gray-200">
@@ -1358,7 +1382,7 @@
               </div>`;
           }
           if (!hasActivity)
-            popupContent += `<div class="text-[11px] text-gray-400 mt-1"><i class="fa-solid fa-info-circle ml-1"></i>لا توجد كلمات مجدولة حالياً</div>`;
+            popupContent += `<div class="text-[12px] text-gray-400 mt-1"><i class="fa-solid fa-info-circle ml-1"></i>لا توجد كلمات مجدولة حالياً</div>`;
           popupContent += `</div>`;
 
           const marker = L.marker([m.lat, m.lng], { icon })
@@ -1400,9 +1424,10 @@
             if (m.permit)
               dt += `<span class="bg-blue-50 text-blue-700 px-2 py-1 rounded-md text-[11px]"><i class="fa-solid fa-file-signature ml-1"></i>فسخ: ${m.permit}</span>`;
 
-            let sp = m.speech
-              ? `<div class="mt-2 text-[13px] text-blue-700 font-semibold flex items-start gap-2 bg-blue-50/50 p-2 rounded-lg"><i class="fa-solid fa-microphone mt-1"></i><span>${m.speech}</span></div>`
-              : "";
+            let sp =
+              m.speech && isSpeechActive(m.speechDatetime)
+                ? `<div class="mt-2 text-[13px] text-blue-700 font-semibold flex items-start gap-2 bg-blue-50/50 p-2 rounded-lg"><i class="fa-solid fa-microphone mt-1"></i><span>${m.speech}</span></div>`
+                : "";
 
             let lc =
               m.lectures && m.lectures.length > 0
@@ -1474,6 +1499,7 @@
           updateMapMarkers();
         }
       });
+
       window.selectMosque = (id) => {
         selectedMosqueId = id;
         renderUserMosques();
@@ -1481,8 +1507,10 @@
         const m = globalMosques.find((x) => x.id === id);
         if (m && map) {
           map.flyTo([m.lat, m.lng], 16, { duration: 1 });
-          if (window.innerWidth < 768)
+          if (window.innerWidth < 768) {
             document.getElementById("sidebar").style.height = "55vh";
+            setTimeout(() => map.invalidateSize(), 300);
+          }
         }
       };
 
@@ -1587,6 +1615,8 @@
             .value,
           imam: document.getElementById("cont-mosque-imam").value,
           speech: document.getElementById("cont-mosque-speech").value,
+          speechDatetime: document.getElementById("cont-mosque-speech-time")
+            .value,
           permit: document.getElementById("cont-mosque-permit").value,
           lat: parseFloat(document.getElementById("cont-mosque-lat").value),
           lng: parseFloat(document.getElementById("cont-mosque-lng").value),
@@ -1656,15 +1686,15 @@
       document
         .getElementById("toggle-view-btn")
         .addEventListener("click", () => {
-          currentView = currentView === "user" ? "admin" : "user";
-          if (currentView === "admin") {
-            document.getElementById("toggle-view-btn").innerHTML =
-              `<i class="fa-solid fa-users text-xl"></i>`;
+          const btn = document.getElementById("toggle-view-btn");
+          if (
+            document.getElementById("admin-view").classList.contains("hidden")
+          ) {
+            btn.innerHTML = `<i class="fa-solid fa-users text-xl"></i>`;
             document.getElementById("user-view").classList.add("hidden");
             document.getElementById("admin-view").classList.remove("hidden");
           } else {
-            document.getElementById("toggle-view-btn").innerHTML =
-              `<i class="fa-solid fa-shield-halved text-xl"></i>`;
+            btn.innerHTML = `<i class="fa-solid fa-shield-halved text-xl"></i>`;
             document.getElementById("admin-view").classList.add("hidden");
             document.getElementById("user-view").classList.remove("hidden");
             setTimeout(() => map.invalidateSize(), 300);
@@ -1681,6 +1711,8 @@
           m.neighborhood || "";
         document.getElementById("edit-mosque-imam").value = m.imam || "";
         document.getElementById("edit-mosque-speech").value = m.speech || "";
+        document.getElementById("edit-mosque-speech-time").value =
+          m.speechDatetime || "";
         document.getElementById("edit-mosque-permit").value = m.permit || "";
         document.getElementById("edit-mosque-lat").value = m.lat;
         document.getElementById("edit-mosque-lng").value = m.lng;
@@ -1699,6 +1731,8 @@
             .value,
           imam: document.getElementById("edit-mosque-imam").value,
           speech: document.getElementById("edit-mosque-speech").value,
+          speechDatetime: document.getElementById("edit-mosque-speech-time")
+            .value,
           permit: document.getElementById("edit-mosque-permit").value,
           lat: parseFloat(document.getElementById("edit-mosque-lat").value),
           lng: parseFloat(document.getElementById("edit-mosque-lng").value),
@@ -1736,6 +1770,8 @@
               .value,
             imam: document.getElementById("new-mosque-imam").value,
             speech: document.getElementById("new-mosque-speech").value,
+            speechDatetime: document.getElementById("new-mosque-speech-time")
+              .value,
             permit: document.getElementById("new-mosque-permit").value,
             lat: parseFloat(document.getElementById("new-mosque-lat").value),
             lng: parseFloat(document.getElementById("new-mosque-lng").value),
@@ -2019,9 +2055,9 @@
 
         let hasData = false;
         globalMosques.forEach((m) => {
-          if (m.speech?.trim()) {
+          if (m.speech?.trim() && isSpeechActive(m.speechDatetime)) {
             hasData = true;
-            html += `<tr><td class="mosque-name">${m.name}</td><td><span style="color: var(--gold-color); font-weight: bold;">(كلمة مستمرة)</span><br>${m.speech}</td><td style="color:#2563eb; font-weight:bold;">${m.permit || "--"}</td><td style="color:#666;">مستمر</td></tr>`;
+            html += `<tr><td class="mosque-name">${m.name}</td><td><span style="color: var(--gold-color); font-weight: bold;">(كلمة)</span><br>${m.speech}</td><td style="color:#2563eb; font-weight:bold;">${m.permit || "--"}</td><td style="color:#666;">مستمر</td></tr>`;
           }
           if (m.lectures?.length) {
             m.lectures.forEach((l) => {
@@ -2048,7 +2084,7 @@
         pw.document.close();
       };
 
-      // --- مرونة السحب الموسعة (Resizer) ---
+      // --- مرونة السحب الموسعة جداً (Resizer) ---
       const resizer = document.getElementById("resizer"),
         sidebar = document.getElementById("sidebar");
       let isResizing = false;
@@ -2075,7 +2111,6 @@
           if (nh > 100 && nh < window.innerHeight - 150)
             sidebar.style.height = nh + "px";
         }
-        if (map) map.invalidateSize();
       });
       window.addEventListener(
         "touchmove",
@@ -2084,7 +2119,6 @@
           let nh = window.innerHeight - e.touches[0].clientY;
           if (nh > 100 && nh < window.innerHeight - 150)
             sidebar.style.height = nh + "px";
-          if (map) map.invalidateSize();
         },
         { passive: true },
       );
