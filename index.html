@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>برنامج المحاضرات والجوامع - أبها</title>
 
+    <!-- الخطوط ومكتبات التصميم -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Amiri:wght@400;700&display=swap"
       rel="stylesheet"
     />
     <script src="https://cdn.tailwindcss.com"></script>
@@ -19,6 +20,8 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
+    <!-- مكتبة التعامل مع ملفات Excel (SheetJS) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
       body {
@@ -38,7 +41,7 @@
         background: #059669;
       }
 
-      /* تصميم أيقونة الخريطة (الدائرة) */
+      /* تصميم أيقونة الخريطة (الدائرة) الجديد والأنيق */
       .custom-marker {
         background: linear-gradient(135deg, #10b981, #059669);
         border: 2px solid white;
@@ -51,7 +54,7 @@
         color: white;
       }
       .custom-marker i {
-        font-size: 12px;
+        font-size: 14px;
       }
       .custom-marker.selected {
         background: linear-gradient(135deg, #059669, #047857);
@@ -60,6 +63,8 @@
         box-shadow: 0 8px 15px rgba(16, 185, 129, 0.6);
         border-color: #ecfdf5;
       }
+
+      /* تأثير النبض للمساجد النشطة */
       .marker-pulse {
         animation: pulse-ring 2s infinite;
       }
@@ -75,7 +80,7 @@
         }
       }
 
-      /* تنسيق البطاقة المنبثقة (Popup) */
+      /* تنسيق البطاقة المنبثقة فوق الخريطة (Popup) */
       .leaflet-popup-content-wrapper {
         border-radius: 16px;
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
@@ -87,6 +92,9 @@
         margin: 0;
         font-family: "Cairo", sans-serif;
         line-height: 1.6;
+      }
+      .leaflet-popup-tip {
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
       }
       .custom-popup .leaflet-popup-close-button {
         right: auto !important;
@@ -118,7 +126,22 @@
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
       }
 
-      /* البطاقات */
+      /* منطقة الإمساك المرنة الواسعة جداً */
+      #resizer {
+        position: relative;
+      }
+      #resizer::before {
+        content: "";
+        position: absolute;
+        top: -15px;
+        bottom: -15px;
+        left: -15px;
+        right: -15px;
+        z-index: 50;
+        cursor: inherit;
+      }
+
+      /* تصميم البطاقات */
       .mosque-card {
         background: linear-gradient(145deg, #ffffff, #f8fafc);
         border: 1px solid #f1f5f9;
@@ -134,6 +157,24 @@
         border-color: #10b981;
         box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
       }
+      /* الفلترة السريعة Chips */
+      .filter-chip {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 1px solid #e2e8f0;
+        background: white;
+        color: #475569;
+        white-space: nowrap;
+      }
+      .filter-chip.active {
+        background: #10b981;
+        color: white;
+        border-color: #10b981;
+      }
     </style>
   </head>
   <body
@@ -144,27 +185,220 @@
       class="fixed top-20 left-1/2 transform -translate-x-1/2 z-[9999] flex flex-col gap-2 pointer-events-none"
     ></div>
 
+    <!-- الشريط العلوي -->
     <header
-      class="bg-emerald-700 text-white p-4 shadow-md flex justify-between items-center z-20 shrink-0"
+      class="bg-emerald-700 text-white p-3 md:p-4 shadow-md flex flex-col md:flex-row justify-between items-center z-20 shrink-0 gap-2"
     >
-      <div class="flex items-center gap-2 select-none">
-        <i class="fa-solid fa-map-location-dot text-2xl"></i>
-        <h1
-          id="secret-admin-trigger"
-          class="text-xl font-bold cursor-pointer transition-opacity active:opacity-50"
+      <div class="flex items-center justify-between w-full md:w-auto">
+        <div class="flex items-center gap-2 select-none">
+          <i class="fa-solid fa-map-location-dot text-2xl"></i>
+          <!-- المدخل السري: انقر 5 مرات هنا -->
+          <h1
+            id="secret-admin-trigger"
+            class="text-lg md:text-xl font-bold cursor-pointer transition-opacity active:opacity-50"
+          >
+            دليل المحاضرات والجوامع
+          </h1>
+        </div>
+      </div>
+
+      <!-- قائمة فريق العمل المنسدلة (تظهر فقط بعد تسجيل الدخول) -->
+      <div
+        id="team-nav-dropdown-container"
+        class="hidden relative w-full md:w-auto z-50"
+      >
+        <button
+          onclick="toggleTeamDropdown(event)"
+          class="w-full md:w-auto bg-amber-500 hover:bg-amber-600 text-slate-900 font-extrabold px-4 py-1.5 rounded-lg shadow-md text-sm flex items-center justify-center gap-2 transition-all"
         >
-          دليل المحاضرات والجوامع
-        </h1>
+          <i class="fa-solid fa-bolt"></i>
+          <span id="logged-role-title">إدارة النظام</span>
+          <i class="fa-solid fa-chevron-down text-xs"></i>
+        </button>
+
+        <div
+          id="team-dropdown-menu"
+          class="hidden absolute left-0 md:right-0 mt-2 w-full md:w-64 bg-white text-slate-800 rounded-xl shadow-2xl border border-gray-200 overflow-hidden py-1 z-50"
+        >
+          <div
+            class="px-4 py-2 bg-slate-100 border-b border-gray-200 text-xs text-gray-500 font-bold"
+          >
+            ⚡ التنقل السريع للفريق:
+          </div>
+          <button
+            onclick="
+              switchWorkspaceView('user');
+              toggleTeamDropdown();
+            "
+            class="w-full text-right px-4 py-2.5 hover:bg-emerald-50 flex items-center gap-3 text-sm font-semibold text-gray-700 border-b border-gray-100 transition-colors"
+          >
+            <i class="fa-solid fa-map text-emerald-600 w-5 text-center"></i>
+            الخريطة العامة (الرئيسية)
+          </button>
+          <button
+            id="menu-item-admin"
+            onclick="
+              switchWorkspaceView('admin');
+              toggleTeamDropdown();
+            "
+            class="w-full text-right px-4 py-2.5 hover:bg-emerald-50 flex items-center gap-3 text-sm font-semibold text-gray-700 border-b border-gray-100 transition-colors"
+          >
+            <i
+              class="fa-solid fa-shield-halved text-blue-600 w-5 text-center"
+            ></i>
+            لوحة تحكم المدير
+          </button>
+          <button
+            onclick="
+              openContributorPortal();
+              toggleTeamDropdown();
+              switchContTab('mosque');
+            "
+            class="w-full text-right px-4 py-2.5 hover:bg-emerald-50 flex items-center gap-3 text-sm font-semibold text-gray-700 border-b border-gray-100 transition-colors"
+          >
+            <i
+              class="fa-solid fa-plus-circle text-emerald-600 w-5 text-center"
+            ></i>
+            إضافة جامع أو محاضرة
+          </button>
+          <button
+            onclick="
+              openContributorPortal();
+              toggleTeamDropdown();
+              switchContTab('excel');
+            "
+            class="w-full text-right px-4 py-2.5 hover:bg-emerald-50 flex items-center gap-3 text-sm font-semibold text-gray-700 border-b border-gray-100 transition-colors"
+          >
+            <i
+              class="fa-solid fa-file-excel text-green-600 w-5 text-center"
+            ></i>
+            استيراد وتصدير Excel
+          </button>
+          <button
+            onclick="
+              logoutTeam();
+              toggleTeamDropdown();
+            "
+            class="w-full text-right px-4 py-2.5 hover:bg-red-50 flex items-center gap-3 text-sm font-bold text-red-600 transition-colors"
+          >
+            <i
+              class="fa-solid fa-right-from-bracket text-red-500 w-5 text-center"
+            ></i>
+            تسجيل الخروج
+          </button>
+        </div>
+      </div>
+
+      <!-- شريط مواقيت الصلاة في أبها -->
+      <div
+        id="prayer-times-bar"
+        class="bg-emerald-800/80 px-3 py-1.5 rounded-lg text-xs md:text-sm font-semibold flex items-center gap-2 md:gap-4 w-full md:w-auto justify-center border border-emerald-600/50 shadow-inner overflow-x-auto whitespace-nowrap"
+      >
+        <span class="text-emerald-300 flex items-center gap-1"
+          ><i class="fa-solid fa-clock"></i>
+          <span id="next-prayer-name">جاري حساب الأوقات...</span></span
+        >
+        <span
+          id="prayer-countdown"
+          class="font-bold bg-emerald-950 px-2 py-0.5 rounded text-amber-300"
+          >00:00:00</span
+        >
+        <span class="hidden lg:inline text-gray-300">|</span>
+        <span
+          class="hidden lg:inline text-xs opacity-90"
+          id="all-prayers-list"
+        ></span>
       </div>
     </header>
 
-    <button
-      id="toggle-view-btn"
-      class="hidden fixed bottom-4 left-4 text-emerald-600 bg-white w-12 h-12 rounded-full transition-all z-[9000] shadow-lg flex items-center justify-center border border-gray-200 hover:bg-emerald-50"
-      title="تبديل الواجهة"
+    <!-- نافذة تسجيل الدخول الموحدة (فريق العمل - قائمة منسدلة) -->
+    <div
+      id="team-login-modal"
+      class="hidden fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center backdrop-blur-sm p-4"
     >
-      <i class="fa-solid fa-shield-halved text-xl"></i>
-    </button>
+      <div
+        class="bg-white p-6 md:p-8 rounded-2xl w-full max-w-md shadow-2xl border border-emerald-100 transform transition-all"
+      >
+        <div class="text-center mb-6">
+          <div
+            class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl shadow-inner"
+          >
+            <i class="fa-solid fa-user-lock"></i>
+          </div>
+          <h3 class="text-xl font-extrabold text-gray-800">
+            بوابة فريق العمل والدعم
+          </h3>
+          <p class="text-xs text-gray-500 mt-1">
+            يرجى تحديد صفتك من القائمة وإدخال كلمة المرور للمتابعة
+          </p>
+        </div>
+
+        <form
+          id="team-login-form"
+          onsubmit="submitTeamLogin(event)"
+          class="space-y-4"
+        >
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1.5"
+              ><i class="fa-solid fa-id-badge text-emerald-600 ml-1"></i> اختر
+              الصلاحية (القائمة المنسدلة):</label
+            >
+            <select
+              id="login-role-select"
+              class="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none font-bold text-sm text-gray-800 cursor-pointer shadow-sm"
+              onchange="onRoleSelectChange()"
+            >
+              <option value="admin">
+                🛡️ المدير العام (إدارة وحذف واعتماد)
+              </option>
+              <option value="contributor" selected>
+                ✍️ معاون / مساهم (إضافة جوامع ومحاضرات و Excel)
+              </option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1.5"
+              ><i class="fa-solid fa-key text-emerald-600 ml-1"></i> كلمة
+              المرور:</label
+            >
+            <input
+              type="password"
+              id="login-password-input"
+              placeholder="أدخل كلمة المرور الخاصة بصلاحيتك..."
+              class="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-none text-sm pr-4 shadow-sm"
+              required
+            />
+          </div>
+
+          <div
+            class="bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-[11px] text-amber-800 flex items-center gap-2"
+          >
+            <i class="fa-solid fa-circle-info text-amber-600 text-base"></i>
+            <span id="login-role-hint"
+              >المعاون يمكنه إضافة المساجد والمحاضرات ورفع ملفات Excel ليتم
+              اعتمادها.</span
+            >
+          </div>
+
+          <div class="pt-2 flex gap-2">
+            <button
+              type="button"
+              onclick="closeTeamLogin()"
+              class="w-1/3 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-sm transition-colors"
+            >
+              إلغاء
+            </button>
+            <button
+              type="submit"
+              class="w-2/3 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-extrabold text-sm shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2"
+            >
+              <i class="fa-solid fa-arrow-right-to-bracket"></i> دخول النظام
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <button
       onclick="
@@ -214,7 +448,7 @@
       </div>
     </div>
 
-    <!-- بوابة المتعاونين -->
+    <!-- بوابة المتعاونين (المصرح لهم) -->
     <div
       id="contributor-modal"
       class="hidden fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center backdrop-blur-sm transition-opacity p-4 overflow-y-auto"
@@ -237,7 +471,7 @@
           </button>
         </div>
 
-        <div class="flex gap-2 mb-6">
+        <div class="flex flex-col sm:flex-row gap-2 mb-6">
           <button
             onclick="switchContTab('mosque')"
             id="cont-tab-mosque"
@@ -250,7 +484,14 @@
             id="cont-tab-lecture"
             class="flex-1 py-2 font-bold rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
           >
-            إضافة محاضرة أو كلمة
+            محاضرة / كلمة
+          </button>
+          <button
+            onclick="switchContTab('excel')"
+            id="cont-tab-excel"
+            class="flex-1 py-2 font-bold rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors border border-dashed border-gray-300"
+          >
+            إضافة جماعية (Excel)
           </button>
         </div>
 
@@ -394,6 +635,45 @@
           >
             إرسال للإدارة للموافقة
           </button>
+        </div>
+
+        <!-- تبويب رفع Excel للمتعاونين -->
+        <div id="cont-excel-section" class="hidden space-y-4">
+          <div class="bg-blue-50 p-5 rounded-xl border border-blue-200">
+            <h4 class="font-bold text-blue-900 mb-2">
+              كيفية إعداد ملف Excel للرفع؟
+            </h4>
+            <p class="text-sm text-gray-700 mb-3 leading-relaxed">
+              قم بإنشاء ملف Excel يحتوي على الأعمدة التالية (حسب ما تريد
+              إضافته):<br />
+              <span class="font-semibold text-emerald-700"
+                >اسم الجامع، خط العرض، خط الطول، الحي، اسم الإمام، الكلمة
+                المعتادة، عنوان المحاضرة، اسم الملقي، تاريخ المحاضرة، وقت
+                المحاضرة، رقم الفسخ.</span
+              >
+            </p>
+            <ul
+              class="text-xs text-gray-600 list-disc list-inside space-y-1 mb-4"
+            >
+              <li>لإضافة جامع جديد: املأ (اسم الجامع، خط العرض، خط الطول).</li>
+              <li>
+                لإضافة محاضرة لجامع موجود: اكتب اسمه فقط، مع بيانات المحاضرة.
+              </li>
+              <li>كل الصفوف المرفوعة ستذهب للإدارة أولاً لاعتمادها.</li>
+            </ul>
+            <label
+              class="w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 font-bold text-sm flex items-center justify-center gap-2 shadow cursor-pointer text-center"
+            >
+              <i class="fa-solid fa-file-import"></i> رفع ملف Excel وإرسال
+              للإدارة
+              <input
+                type="file"
+                accept=".xlsx, .xls, .csv"
+                class="hidden"
+                onchange="importFromExcel(event, 'contributor')"
+              />
+            </label>
+          </div>
         </div>
       </div>
     </div>
@@ -589,24 +869,65 @@
         <div
           class="p-4 border-b border-gray-100 bg-white shrink-0 shadow-sm z-10"
         >
-          <div class="relative mb-3">
+          <div class="relative mb-2">
             <input
               type="text"
               id="search-input"
               placeholder="ابحث عن جامع، حي، إمام، أو محاضرة..."
-              class="w-full bg-gray-50 border border-gray-200 rounded-xl pr-10 pl-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-sm"
+              class="w-full bg-gray-50 border border-gray-200 rounded-xl pr-10 pl-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-sm"
             />
             <i
-              class="fa-solid fa-search absolute right-4 top-4 text-gray-400"
+              class="fa-solid fa-search absolute right-4 top-3.5 text-gray-400"
             ></i>
           </div>
+
+          <!-- أزرار الفلترة السريعة Chips -->
+          <div class="flex gap-1.5 overflow-x-auto py-1 mb-2 no-scrollbar">
+            <button
+              onclick="setQuickFilter('all')"
+              id="chip-all"
+              class="filter-chip active"
+            >
+              الكل
+            </button>
+            <button
+              onclick="setQuickFilter('today')"
+              id="chip-today"
+              class="filter-chip"
+            >
+              📅 اليوم
+            </button>
+            <button
+              onclick="setQuickFilter('speech')"
+              id="chip-speech"
+              class="filter-chip"
+            >
+              🎤 كلمات فقط
+            </button>
+            <button
+              onclick="setQuickFilter('favs')"
+              id="chip-favs"
+              class="filter-chip"
+            >
+              ❤️ مفضلتي
+            </button>
+            <button
+              onclick="setQuickFilter('nearest')"
+              id="chip-nearest"
+              class="filter-chip"
+            >
+              📍 الأقرب
+            </button>
+          </div>
+
           <select
             id="sort-filter"
-            class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-600 cursor-pointer font-semibold"
+            class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-600 cursor-pointer font-semibold"
           >
-            <option value="all">الكل (الافتراضي)</option>
+            <option value="all">فرز: الكل (الافتراضي)</option>
             <option value="nearest">📍 الأقرب لموقعي</option>
             <option value="has_lectures">🎤 يوجد بها محاضرات أو كلمات</option>
+            <option value="favorites">❤️ جوامعي المفضلة</option>
           </select>
         </div>
 
@@ -623,7 +944,7 @@
           class="py-2 bg-gray-100 border-t border-gray-200 text-center shrink-0"
         >
           <span class="text-[10px] text-gray-400 font-bold tracking-wide"
-            >بيانات الخرائط © Google Maps & Leaflet</span
+            >بيانات الخرائط © OpenStreetMap & Leaflet</span
           >
         </div>
       </div>
@@ -631,17 +952,13 @@
       <!-- منطقة السحب الموسعة جداً لراحة المستخدم -->
       <div
         id="resizer"
-        class="w-4 h-4 md:w-5 md:h-full bg-gray-200 z-20 cursor-row-resize md:cursor-col-resize order-2 flex items-center justify-center shrink-0 hover:bg-emerald-300 transition-colors relative"
+        class="resizer-zone bg-gray-200 z-20 cursor-row-resize md:cursor-col-resize order-2 flex items-center justify-center shrink-0 hover:bg-emerald-300 transition-colors relative"
       >
         <div class="flex md:flex-col gap-1 z-10">
           <div class="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
           <div class="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
           <div class="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
         </div>
-        <!-- منطقة التقاط مخفية ضخمة لتسهيل الإمساك -->
-        <div
-          class="absolute -inset-x-4 -inset-y-4 md:-inset-x-4 md:inset-y-0 z-0"
-        ></div>
       </div>
 
       <div
@@ -692,7 +1009,7 @@
             id="tab-log-btn"
             class="px-6 py-4 font-bold text-sm md:text-base transition-colors text-gray-500 hover:bg-gray-100"
           >
-            التقارير
+            التقارير و Excel
           </button>
           <button
             onclick="switchAdminTab('feedback')"
@@ -767,14 +1084,14 @@
                   />
                 </div>
                 <div class="md:col-span-2">
-                  <label class="block text-sm text-gray-600 mb-1"
-                    >تاريخ ووقت الكلمة (للإخفاء التلقائي)</label
+                  <label
+                    class="block text-sm text-gray-600 mb-1 text-red-600 font-bold"
+                    >تاريخ ووقت الكلمة (للإخفاء التلقائي بعد نصف ساعة)</label
                   >
                   <input
                     type="datetime-local"
                     id="new-mosque-speech-time"
-                    class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white"
-                    title="سوف تختفي الكلمة تلقائياً بعد مرور نصف ساعة من هذا الوقت"
+                    class="w-full p-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 bg-red-50"
                   />
                 </div>
                 <div class="md:col-span-2">
@@ -964,7 +1281,7 @@
                   id="lecture-management-empty"
                   class="h-full flex items-center justify-center text-gray-400 p-10 bg-gray-50 rounded-xl border border-dashed border-gray-200"
                 >
-                  الرجاء اختيار جامع من القائمة.
+                  الرجاء اختيار جامع من القائمة لإدارة محاضراته.
                 </div>
               </div>
             </div>
@@ -974,17 +1291,96 @@
           <div id="admin-pending-section" class="space-y-6 hidden">
             <div class="bg-white rounded-xl">
               <h3 class="text-lg font-bold text-gray-800 mb-4">
-                طلبات إضافة (مساجد / محاضرات) من المتعاونين
+                طلبات إضافة وتعديل من المتعاونين
               </h3>
               <div id="pending-admin-list" class="space-y-4"></div>
             </div>
           </div>
 
-          <!-- سجل التقارير -->
-          <div id="admin-log-section" class="space-y-6 hidden">
+          <!-- سجل التقارير وإدارة Excel -->
+          <div id="admin-log-section" class="space-y-8 hidden">
+            <!-- قسم Excel المتطور للرفع والتنزيل -->
+            <div
+              class="bg-emerald-50 p-6 rounded-xl border border-emerald-200 shadow-sm"
+            >
+              <h3 class="text-lg font-bold text-emerald-900 mb-2">
+                <i
+                  class="fa-solid fa-file-excel text-emerald-600 ml-2 text-xl"
+                ></i
+                >استيراد وتصدير جماعي عبر Excel
+              </h3>
+              <p class="text-sm text-gray-700 mb-4">
+                النظام قادر على إضافة مساجد جديدة، أو
+                <strong class="text-emerald-700"
+                  >تحديث مساجد موجودة وإضافة محاضرات لها</strong
+                >
+                مباشرة من ملف الإكسل إذا كان اسم الجامع متطابقاً.
+              </p>
+
+              <div
+                class="bg-white p-4 rounded-lg border border-emerald-100 mb-6 text-xs text-gray-600"
+              >
+                <span class="font-bold block mb-1"
+                  >الأعمدة المدعومة في ملف Excel:</span
+                >
+                (اسم الجامع، خط العرض، خط الطول، الحي، اسم الإمام، الكلمة
+                المعتادة، وقت الكلمة، عنوان المحاضرة، اسم الملقي، تاريخ
+                المحاضرة، وقت المحاضرة، رقم الفسخ)
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div
+                  class="bg-white p-4 rounded-lg border border-gray-200 flex flex-col justify-between"
+                >
+                  <div>
+                    <h4 class="font-bold text-gray-800 mb-1">
+                      📥 تصدير البيانات إلى Excel
+                    </h4>
+                    <p class="text-xs text-gray-500 mb-4">
+                      ينشئ ملف (.xlsx) يحتوي على كل المساجد والمحاضرات المسجلة
+                      حالياً.
+                    </p>
+                  </div>
+                  <button
+                    onclick="exportToExcel()"
+                    class="bg-emerald-600 text-white px-4 py-2.5 rounded-lg hover:bg-emerald-700 font-bold text-sm flex items-center justify-center gap-2 shadow"
+                  >
+                    <i class="fa-solid fa-download"></i> تنزيل كشف Excel الآن
+                  </button>
+                </div>
+
+                <div
+                  class="bg-white p-4 rounded-lg border border-gray-200 flex flex-col justify-between"
+                >
+                  <div>
+                    <h4 class="font-bold text-gray-800 mb-1">
+                      📤 استيراد شامل من Excel
+                    </h4>
+                    <p class="text-xs text-gray-500 mb-4">
+                      اختر ملفاً لرفعه والتنفيذ الفوري على قاعدة البيانات.
+                    </p>
+                  </div>
+                  <label
+                    class="bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 font-bold text-sm flex items-center justify-center gap-2 shadow cursor-pointer text-center"
+                  >
+                    <i class="fa-solid fa-file-import"></i> اختر ملف Excel لرفعه
+                    <input
+                      type="file"
+                      id="excel-import-file"
+                      accept=".xlsx, .xls, .csv"
+                      class="hidden"
+                      onchange="importFromExcel(event, 'admin')"
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- تقرير الطباعة الفخم الأصلي -->
             <div class="bg-gray-50 p-6 rounded-xl border border-gray-200">
               <h3 class="text-lg font-bold text-gray-800 mb-4">
-                <i class="fa-solid fa-print ml-2"></i>طباعة تقرير الأنشطة
+                <i class="fa-solid fa-print ml-2"></i>طباعة تقرير الأنشطة PDF /
+                ورقي
               </h3>
               <p class="text-sm text-gray-600 mb-4">
                 حدد النطاق الزمني لطباعة التقرير، أو اتركها فارغة لطباعة كل
@@ -1079,6 +1475,11 @@
         targetLatInputId = null,
         targetLngInputId = null;
 
+      let favorites = JSON.parse(localStorage.getItem("fav_mosques") || "[]");
+      let activeQuickFilter = "all";
+      let hasCheckedDeepLink = false;
+      let currentLoggedRole = null; // 'admin' | 'contributor'
+
       let mosquesCollectionRef = collection(
         db,
         "artifacts",
@@ -1143,14 +1544,379 @@
         return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
       }
 
-      // دالة لمعرفة هل الكلمة لا تزال نشطة (أقل من نصف ساعة على مرور الوقت المحدد)
       function isSpeechActive(speechDatetime) {
-        if (!speechDatetime) return true; // إذا لم يحدد وقت، اعتبرها نشطة دائماً لتظهر
+        if (!speechDatetime) return true;
         const speechTime = new Date(speechDatetime).getTime();
         const now = Date.now();
-        const diffMinutes = (now - speechTime) / (1000 * 60);
-        return diffMinutes <= 30; // إرجاع صحيح فقط إذا لم يمر أكثر من 30 دقيقة
+        const diffMins = (now - speechTime) / (1000 * 60);
+        return diffMins <= 30;
       }
+
+      // --- نظام مواقيت الصلاة في أبها ---
+      async function fetchAbhaPrayerTimes() {
+        try {
+          const res = await fetch(
+            "https://api.aladhan.com/v1/timingsByCity?city=Abha&country=Saudi%20Arabia&method=4",
+          );
+          const data = await res.json();
+          if (data && data.data && data.data.timings) {
+            const t = data.data.timings;
+            document.getElementById("all-prayers-list").innerText =
+              `الفجر ${t.Fajr} | الظهر ${t.Dhuhr} | العصر ${t.Asr} | المغرب ${t.Maghrib} | العشاء ${t.Isha}`;
+            startPrayerCountdown(t);
+          }
+        } catch (e) {
+          document.getElementById("next-prayer-name").innerText =
+            "أبها - مرحباً بكم";
+        }
+      }
+      function startPrayerCountdown(timings) {
+        const pNames = {
+          Fajr: "الفجر",
+          Dhuhr: "الظهر",
+          Asr: "العصر",
+          Maghrib: "المغرب",
+          Isha: "العشاء",
+        };
+        setInterval(() => {
+          const now = new Date();
+          let nextP = null,
+            minDiff = Infinity;
+          for (let key in pNames) {
+            let [h, m] = timings[key].split(":").map(Number);
+            let pDate = new Date();
+            pDate.setHours(h, m, 0, 0);
+            if (pDate < now) pDate.setDate(pDate.getDate() + 1);
+            let diff = pDate - now;
+            if (diff < minDiff) {
+              minDiff = diff;
+              nextP = { name: pNames[key], diff };
+            }
+          }
+          if (nextP) {
+            document.getElementById("next-prayer-name").innerText =
+              `الصلاة القادمة: ${nextP.name}`;
+            let h = Math.floor(nextP.diff / (1000 * 60 * 60));
+            let m = Math.floor((nextP.diff % (1000 * 60 * 60)) / (1000 * 60));
+            let s = Math.floor((nextP.diff % (1000 * 60)) / 1000);
+            document.getElementById("prayer-countdown").innerText =
+              `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+          }
+        }, 1000);
+      }
+      fetchAbhaPrayerTimes();
+
+      // --- نظام كشف التكرار الذكي للمساجد ---
+      function isDuplicateMosque(lat, lng, name) {
+        return globalMosques.some((m) => {
+          const dist = getDistance(lat, lng, m.lat, m.lng);
+          const sameName =
+            normalizeArabicText(m.name) === normalizeArabicText(name);
+          return dist < 0.05 || (dist < 0.3 && sameName);
+        });
+      }
+
+      // --- نظام المفضلة ---
+      window.toggleFavorite = (id, event) => {
+        if (event) event.stopPropagation();
+        if (favorites.includes(id)) {
+          favorites = favorites.filter((x) => x !== id);
+          showToast("تم إزالة الجامع من المفضلة");
+        } else {
+          favorites.push(id);
+          showToast("تم حفظ الجامع في المفضلة ❤️");
+        }
+        localStorage.setItem("fav_mosques", JSON.stringify(favorites));
+        renderUserMosques();
+        updateMapMarkers();
+      };
+
+      // --- نظام المشاركة عبر الواتساب ---
+      window.shareWhatsApp = (id, event) => {
+        if (event) event.stopPropagation();
+        const m = globalMosques.find((x) => x.id === id);
+        if (!m) return;
+        let text = `📍 *${m.name}*\n`;
+        if (m.neighborhood) text += `🏙️ الحي: ${m.neighborhood}\n`;
+        if (m.speech && isSpeechActive(m.speechDatetime))
+          text += `🎤 الكلمة المعتادة: ${m.speech}\n`;
+        if (m.lectures && m.lectures.length > 0) {
+          text += `\n*المحاضرات القادمة:*\n`;
+          m.lectures.forEach((l) => {
+            text += `▪️ ${l.title} (الشيخ: ${l.speaker}) - 🗓️ ${l.date} | ⏰ ${l.time}\n`;
+          });
+        }
+        text += `\n🔗 *رابط الموقع على خرائط جوجل:*\nhttps://www.google.com/maps/dir/?api=1&destination=${m.lat},${m.lng}\n`;
+        text += `\n📱 _تم النشر عبر دليل المحاضرات والجوامع - أبها_`;
+        window.open(
+          `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`,
+          "_blank",
+        );
+      };
+
+      // --- الفلترة السريعة (Chips) ---
+      window.setQuickFilter = (type) => {
+        activeQuickFilter = type;
+        ["all", "today", "speech", "favs", "nearest"].forEach((t) => {
+          const el = document.getElementById(`chip-${t}`);
+          if (el)
+            el.className = t === type ? "filter-chip active" : "filter-chip";
+        });
+        if (type === "nearest") {
+          document.getElementById("sort-filter").value = "nearest";
+          document
+            .getElementById("sort-filter")
+            .dispatchEvent(new Event("change"));
+          return;
+        } else if (type === "favs") {
+          document.getElementById("sort-filter").value = "favorites";
+        } else {
+          document.getElementById("sort-filter").value = "all";
+        }
+        renderUserMosques();
+        updateMapMarkers();
+      };
+
+      // --- نظام Excel: تصدير واستيراد ذكي شامل للمدير والمتعاون ---
+      window.exportToExcel = () => {
+        if (!globalMosques || globalMosques.length === 0)
+          return showToast("لا توجد بيانات للتصدير", true);
+        const exportData = [];
+
+        globalMosques.forEach((m) => {
+          let baseData = {
+            "اسم الجامع": m.name || "",
+            الحي: m.neighborhood || "",
+            الإمام: m.imam || "",
+            "خط العرض (Latitude)": m.lat,
+            "خط الطول (Longitude)": m.lng,
+            "الكلمة المعتادة": m.speech || "",
+            "وقت الكلمة": m.speechDatetime || "",
+            "رقم الفسخ": m.permit || "",
+          };
+
+          if (m.lectures && m.lectures.length > 0) {
+            m.lectures.forEach((l) => {
+              exportData.push({
+                ...baseData,
+                "عنوان المحاضرة": l.title,
+                "اسم الملقي": l.speaker,
+                "تاريخ المحاضرة": l.date,
+                "وقت المحاضرة": l.time,
+              });
+            });
+          } else {
+            exportData.push(baseData);
+          }
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "البيانات الشاملة");
+        XLSX.writeFile(workbook, `دليل_مساجد_ومحاضرات_أبها.xlsx`);
+        showToast("تم تنزيل كشف Excel بنجاح 📥");
+      };
+
+      window.importFromExcel = (e, role) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+          showToast("جاري معالجة الملف...");
+          try {
+            const data = new Uint8Array(evt.target.result);
+            const workbook = XLSX.read(data, { type: "array" });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const json = XLSX.utils.sheet_to_json(worksheet);
+
+            if (!json || json.length === 0)
+              return showToast("الملف فارغ أو غير صالح", true);
+
+            let countNewMosques = 0,
+              countUpdates = 0,
+              countLectures = 0;
+
+            for (let row of json) {
+              const mName = row["اسم الجامع"] || row["name"] || row["الاسم"];
+              if (!mName) continue;
+
+              const lat = parseFloat(
+                row["خط العرض (Latitude)"] || row["خط العرض"] || row["lat"],
+              );
+              const lng = parseFloat(
+                row["خط الطول (Longitude)"] || row["خط الطول"] || row["lng"],
+              );
+              const imam = row["اسم الإمام"] || row["الإمام"];
+              const neighborhood = row["الحي"];
+              const speech = row["الكلمة المعتادة"];
+              const speechTime = row["وقت الكلمة"];
+              const permit = row["رقم الفسخ"];
+
+              const lecTitle = row["عنوان المحاضرة"];
+              const lecSpeaker = row["اسم الملقي"];
+              const lecDate = row["تاريخ المحاضرة"];
+              const lecTime = row["وقت المحاضرة"];
+
+              let existingMosque = globalMosques.find(
+                (m) =>
+                  normalizeArabicText(m.name) === normalizeArabicText(mName),
+              );
+              let mosqueIdToUse = existingMosque ? existingMosque.id : null;
+
+              if (!existingMosque && !isNaN(lat) && !isNaN(lng)) {
+                const newMosqueData = {
+                  name: mName.toString().trim(),
+                  lat: lat,
+                  lng: lng,
+                  neighborhood: neighborhood
+                    ? neighborhood.toString().trim()
+                    : "",
+                  imam: imam ? imam.toString().trim() : "",
+                  speech: speech ? speech.toString().trim() : "",
+                  speechDatetime: speechTime
+                    ? speechTime.toString().trim()
+                    : "",
+                  permit: permit ? permit.toString().trim() : "",
+                  date: new Date().toISOString().slice(0, 10),
+                  lectures: [],
+                };
+
+                if (lecTitle && lecSpeaker) {
+                  newMosqueData.lectures.push({
+                    id:
+                      Date.now().toString() +
+                      Math.random().toString(36).substr(2, 4),
+                    title: lecTitle.toString().trim(),
+                    speaker: lecSpeaker.toString().trim(),
+                    date: lecDate ? lecDate.toString().trim() : "",
+                    time: lecTime ? lecTime.toString().trim() : "",
+                    permit: permit ? permit.toString().trim() : "",
+                  });
+                  countLectures++;
+                }
+
+                if (role === "admin") {
+                  const docRef = await addDoc(
+                    mosquesCollectionRef,
+                    newMosqueData,
+                  );
+                  mosqueIdToUse = docRef.id;
+                  globalMosques.push({ id: mosqueIdToUse, ...newMosqueData });
+                  countNewMosques++;
+                } else {
+                  await addDoc(pendingCollectionRef, {
+                    type: "mosque",
+                    data: newMosqueData,
+                    date: new Date().toISOString(),
+                  });
+                  countNewMosques++;
+                }
+              } else if (existingMosque) {
+                if (role === "admin") {
+                  let updates = {};
+                  if (imam && existingMosque.imam !== imam)
+                    updates.imam = imam.toString().trim();
+                  if (
+                    neighborhood &&
+                    existingMosque.neighborhood !== neighborhood
+                  )
+                    updates.neighborhood = neighborhood.toString().trim();
+                  if (speech && existingMosque.speech !== speech)
+                    updates.speech = speech.toString().trim();
+                  if (
+                    speechTime &&
+                    existingMosque.speechDatetime !== speechTime
+                  )
+                    updates.speechDatetime = speechTime.toString().trim();
+
+                  if (Object.keys(updates).length > 0) {
+                    await updateDoc(
+                      doc(
+                        db,
+                        "artifacts",
+                        appId,
+                        "public",
+                        "data",
+                        "mosques",
+                        existingMosque.id,
+                      ),
+                      updates,
+                    );
+                    countUpdates++;
+                  }
+                }
+
+                if (lecTitle && lecSpeaker) {
+                  const isLecExist = (existingMosque.lectures || []).some(
+                    (l) => l.title === lecTitle && l.date === lecDate,
+                  );
+
+                  if (!isLecExist) {
+                    const lecData = {
+                      id:
+                        Date.now().toString() +
+                        Math.random().toString(36).substr(2, 4),
+                      title: lecTitle.toString().trim(),
+                      speaker: lecSpeaker.toString().trim(),
+                      date: lecDate ? lecDate.toString().trim() : "",
+                      time: lecTime ? lecTime.toString().trim() : "",
+                      permit: permit ? permit.toString().trim() : "",
+                    };
+
+                    if (role === "admin") {
+                      const newLecs = [
+                        ...(existingMosque.lectures || []),
+                        lecData,
+                      ];
+                      await updateDoc(
+                        doc(
+                          db,
+                          "artifacts",
+                          appId,
+                          "public",
+                          "data",
+                          "mosques",
+                          existingMosque.id,
+                        ),
+                        { lectures: newLecs },
+                      );
+                      existingMosque.lectures = newLecs;
+                      countLectures++;
+                    } else {
+                      await addDoc(pendingCollectionRef, {
+                        type: "lecture",
+                        mosqueId: existingMosque.id,
+                        data: lecData,
+                        date: new Date().toISOString(),
+                      });
+                      countLectures++;
+                    }
+                  }
+                }
+              }
+            }
+
+            if (role === "admin") {
+              showToast(
+                `اكتمل الاستيراد: ${countNewMosques} مساجد جديدة، ${countUpdates} تحديثات، ${countLectures} محاضرات.`,
+              );
+            } else {
+              showToast(
+                `تم إرسال ${countNewMosques + countLectures} طلب إضافة للإدارة للموافقة عليها.`,
+              );
+              document
+                .getElementById("contributor-modal")
+                .classList.add("hidden");
+            }
+            e.target.value = "";
+          } catch (err) {
+            showToast("حدث خطأ أثناء قراءة البيانات", true);
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      };
 
       function updateStatsBar() {
         document.getElementById("stats-mosques-count").innerText =
@@ -1173,6 +1939,13 @@
             snapshot.forEach((doc) =>
               globalMosques.push({ id: doc.id, ...doc.data() }),
             );
+
+            // حل مشكلة بقاء نص جاري التحميل عند عدم وجود مساجد
+            if (globalMosques.length === 0) {
+              document.getElementById("mosques-list-container").innerHTML =
+                `<div class="text-center text-gray-400 mt-10 p-6 bg-white rounded-xl border border-dashed"><i class="fa-solid fa-mosque mb-3 text-3xl opacity-50 block"></i>لا توجد مساجد مسجلة حالياً</div>`;
+            }
+
             if (globalMosques.length === 0 && !window.seeded) {
               window.seeded = true;
               seedAbhaMosques();
@@ -1182,6 +1955,24 @@
             renderAdminMosquesTable();
             renderAdminLecturesSection();
             updateStatsBar();
+
+            if (!hasCheckedDeepLink && globalMosques.length > 0) {
+              hasCheckedDeepLink = true;
+              const urlParams = new URLSearchParams(window.location.search);
+              const targetId = urlParams.get("mosque");
+              if (targetId) {
+                setTimeout(() => window.selectMosque(targetId), 600);
+              }
+
+              // فحص رابط الدخول الموحد
+              if (
+                urlParams.get("login") ||
+                urlParams.get("portal") ||
+                urlParams.get("team")
+              ) {
+                openTeamLoginModal();
+              }
+            }
           });
 
           onSnapshot(feedbackCollectionRef, (snapshot) => {
@@ -1226,75 +2017,58 @@
             date: "2026-01-01",
             lectures: [],
           },
-          {
-            name: "جامع الراجحي",
-            neighborhood: "الموظفين",
-            lat: 18.2255,
-            lng: 42.5122,
-            date: "2026-01-01",
-            lectures: [],
-          },
-          {
-            name: "جامع المفتاحة",
-            neighborhood: "المفتاحة",
-            lat: 18.214,
-            lng: 42.502,
-            date: "2026-01-01",
-            lectures: [],
-          },
-          {
-            name: "جامع بن حمران",
-            neighborhood: "النميص",
-            lat: 18.2323,
-            lng: 42.5011,
-            date: "2026-01-01",
-            lectures: [],
-          },
-          {
-            name: "جامع الإمام البخاري",
-            neighborhood: "المنسك",
-            lat: 18.24,
-            lng: 42.52,
-            date: "2026-01-01",
-            lectures: [],
-          },
         ];
         for (const item of list) await addDoc(mosquesCollectionRef, item);
       }
 
       function initMap() {
-        const sm = L.tileLayer(
-          "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
-          { maxZoom: 20 },
+        // تم الاعتماد على خرائط OpenStreetMap القياسية لأنها مستقرة ولا تحجب أحياناً كخرائط جوجل
+        const standard = L.tileLayer(
+          "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+          { maxZoom: 19 },
         );
         const sat = L.tileLayer(
           "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
           { maxZoom: 20 },
         );
+
         map = L.map("map", {
           zoomControl: false,
           attributionControl: false,
-          layers: [sm],
+          layers: [standard],
         }).setView([18.2164, 42.5053], 13);
+
         L.control
           .layers(
-            { "خريطة عادية": sm, "قمر صناعي": sat },
+            { "خريطة عادية": standard, "قمر صناعي": sat },
             {},
             { position: "topleft" },
           )
           .addTo(map);
+
         markersLayer = L.layerGroup().addTo(map);
+
+        // إصلاح مشكلة المساحة الرمادية (إجبار الخريطة على أخذ الحجم الصحيح)
+        setTimeout(() => {
+          map.invalidateSize();
+        }, 500);
+
+        map.on("click", () => {
+          if (window.innerWidth < 768) {
+            document.getElementById("sidebar").style.height = "20vh";
+            setTimeout(() => map.invalidateSize(), 300);
+          }
+        });
       }
 
-      // --- التقاط الخريطة ---
       window.openMapPicker = (latId, lngId) => {
         targetLatInputId = latId;
         targetLngInputId = lngId;
         document.getElementById("map-picker-modal").classList.remove("hidden");
         if (!pickerMap) {
-          const sm = L.tileLayer(
-            "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
-            { maxZoom: 20 },
+          const standard = L.tileLayer(
+            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            { maxZoom: 19 },
           );
           const sat = L.tileLayer(
             "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
@@ -1303,9 +2077,11 @@
           pickerMap = L.map("picker-map", {
             zoomControl: false,
             attributionControl: false,
-            layers: [sm],
+            layers: [standard],
           }).setView([18.2164, 42.5053], 14);
-          L.control.layers({ عادية: sm, "قمر صناعي": sat }).addTo(pickerMap);
+          L.control
+            .layers({ عادية: standard, "قمر صناعي": sat })
+            .addTo(pickerMap);
         }
         const clat = parseFloat(document.getElementById(latId).value);
         const clng = parseFloat(document.getElementById(lngId).value);
@@ -1314,6 +2090,7 @@
           pickerMap.setView([userLocation.lat, userLocation.lng], 15);
         setTimeout(() => pickerMap.invalidateSize(), 300);
       };
+
       window.confirmMapPick = () => {
         const c = pickerMap.getCenter();
         document.getElementById(targetLatInputId).value = c.lat.toFixed(6);
@@ -1324,24 +2101,39 @@
       window.closeMapPicker = () =>
         document.getElementById("map-picker-modal").classList.add("hidden");
 
-      // --- واجهة المستخدم الرئيسية ---
       function getFilteredMosques() {
         const q = normalizeArabicText(
           document.getElementById("search-input").value,
         );
         const filterVal = document.getElementById("sort-filter").value;
+        const todayStr = new Date().toISOString().slice(0, 10);
+
         let f = globalMosques.filter((m) => {
           const str = `${m.name || ""} ${m.imam || ""} ${m.speech || ""} ${m.neighborhood || ""} ${(m.lectures || []).map((l) => l.title + " " + l.speaker).join(" ")}`;
           return normalizeArabicText(str).includes(q);
         });
-        if (filterVal === "has_lectures") {
+
+        if (filterVal === "has_lectures" || activeQuickFilter === "speech") {
           f = f.filter(
             (m) =>
               m.lectures?.length > 0 ||
               (m.speech?.trim() && isSpeechActive(m.speechDatetime)),
           );
         }
-        if (filterVal === "nearest" && userLocation)
+        if (filterVal === "favorites" || activeQuickFilter === "favs") {
+          f = f.filter((m) => favorites.includes(m.id));
+        }
+        if (activeQuickFilter === "today") {
+          f = f.filter(
+            (m) =>
+              (m.speech?.trim() && isSpeechActive(m.speechDatetime)) ||
+              (m.lectures && m.lectures.some((l) => l.date === todayStr)),
+          );
+        }
+        if (
+          (filterVal === "nearest" || activeQuickFilter === "nearest") &&
+          userLocation
+        )
           f.sort(
             (a, b) =>
               getDistance(userLocation.lat, userLocation.lng, a.lat, a.lng) -
@@ -1369,10 +2161,13 @@
             iconAnchor: isSel ? [20, 20] : [15, 15],
           });
 
-          let popupContent = `<div class="text-right p-1 min-w-[200px] max-w-[280px]">
-                <h4 class="font-bold text-emerald-700 text-[15px] border-b border-gray-200 pb-2 mb-2"><i class="fa-solid fa-mosque ml-1"></i> ${m.name}</h4>`;
+          let popupContent = `<div class="text-right p-2 min-w-[200px] max-w-[280px]">
+                <div class="flex justify-between items-center border-b border-gray-200 pb-2 mb-2">
+                  <h4 class="font-bold text-emerald-700 text-[15px] pr-1"><i class="fa-solid fa-mosque ml-1"></i> ${m.name}</h4>
+                  <button onclick="shareWhatsApp('${m.id}', event)" class="text-green-600 hover:bg-green-50 p-1 rounded" title="مشاركة عبر واتساب"><i class="fa-brands fa-whatsapp text-lg"></i></button>
+                </div>`;
           if (hasActiveSpeech)
-            popupContent += `<div class="text-[13px] text-blue-600 mb-2 font-semibold bg-blue-50 p-2 rounded-lg border border-blue-100"><i class="fa-solid fa-microphone ml-1"></i> ${m.speech}</div>`;
+            popupContent += `<div class="text-[13px] text-blue-600 mb-2 font-bold bg-blue-50 p-2 rounded-lg border border-blue-100"><i class="fa-solid fa-microphone ml-1"></i> ${m.speech}</div>`;
           if (m.lectures && m.lectures.length > 0) {
             const nextLec = m.lectures[0];
             popupContent += `<div class="bg-gray-50 p-2 rounded-lg border border-gray-200">
@@ -1382,7 +2177,7 @@
               </div>`;
           }
           if (!hasActivity)
-            popupContent += `<div class="text-[12px] text-gray-400 mt-1"><i class="fa-solid fa-info-circle ml-1"></i>لا توجد كلمات مجدولة حالياً</div>`;
+            popupContent += `<div class="text-[12px] text-gray-400 mt-1"><i class="fa-solid fa-info-circle ml-1"></i>لا توجد كلمات حالياً</div>`;
           popupContent += `</div>`;
 
           const marker = L.marker([m.lat, m.lng], { icon })
@@ -1409,13 +2204,14 @@
         const cont = document.getElementById("mosques-list-container");
         const list = getFilteredMosques();
         if (list.length === 0) {
-          cont.innerHTML = `<div class="text-center text-gray-400 mt-10 p-6 bg-white rounded-xl border border-dashed"><i class="fa-solid fa-magnifying-glass mb-3 text-3xl opacity-50 block"></i>لا توجد نتائج مطابقة لبحثك</div>`;
+          cont.innerHTML = `<div class="text-center text-gray-400 mt-10 p-6 bg-white rounded-xl border border-dashed"><i class="fa-solid fa-magnifying-glass mb-3 text-3xl opacity-50 block"></i>لا توجد نتائج مطابقة لبحثك أو للفلتر المحدد</div>`;
           return;
         }
 
         cont.innerHTML = list
           .map((m) => {
             const isSel = selectedMosqueId === m.id;
+            const isFav = favorites.includes(m.id);
             let dt = "";
             if (m.neighborhood)
               dt += `<span class="bg-gray-100 text-gray-600 px-2 py-1 rounded-md text-[11px]"><i class="fa-solid fa-map-pin ml-1"></i>${m.neighborhood}</span>`;
@@ -1450,13 +2246,21 @@
                   `</div>`
                 : "";
 
-            const dirBtn = `<a href="https://www.google.com/maps/dir/?api=1&destination=${m.lat},${m.lng}" target="_blank" onclick="event.stopPropagation()" class="text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1"><i class="fa-solid fa-location-arrow"></i> المسار</a>`;
+            const dirBtn = `<a href="https://www.google.com/maps/dir/?api=1&destination=${m.lat},${m.lng}" target="_blank" onclick="event.stopPropagation()" class="text-blue-600 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg text-xs font-bold transition-colors flex items-center gap-1"><i class="fa-solid fa-location-arrow"></i> المسار</a>`;
+            const favBtn = `<button onclick="toggleFavorite('${m.id}', event)" class="p-1 text-base transition-transform active:scale-125 ${isFav ? "text-red-500" : "text-gray-300 hover:text-red-400"}" title="حفظ في المفضلة"><i class="fa-${isFav ? "solid" : "regular"} fa-heart"></i></button>`;
+            const waBtn = `<button onclick="shareWhatsApp('${m.id}', event)" class="text-green-600 hover:bg-green-50 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 border border-green-200" title="نشر عبر واتساب"><i class="fa-brands fa-whatsapp text-sm"></i> واتساب</button>`;
 
             return `
             <div onclick="selectMosque('${m.id}')" class="mosque-card cursor-pointer p-4 rounded-2xl relative overflow-hidden ${isSel ? "selected-card" : ""}">
-                <div class="flex justify-between items-start mb-3">
-                    <h3 class="font-bold text-gray-800 text-base flex-1 ml-2"><i class="fa-solid fa-mosque text-emerald-600 ml-1"></i> ${m.name}</h3>
-                    ${dirBtn}
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="font-bold text-gray-800 text-sm md:text-base pr-1 flex items-center gap-1.5">
+                        ${favBtn}
+                        <i class="fa-solid fa-mosque text-emerald-600"></i> ${m.name}
+                    </h3>
+                    <div class="flex items-center gap-1.5">
+                        ${waBtn}
+                        ${dirBtn}
+                    </div>
                 </div>
                 <div class="flex flex-wrap gap-1.5 mb-1">${dt}</div>
                 ${sp}
@@ -1530,7 +2334,7 @@
         }
       };
 
-      // --- نظام الدخول والمساهمين ---
+      // --- نظام الدخول الموحد والقوائم المنسدلة ---
       let clickCount = 0;
       let clickTimer;
       document
@@ -1543,51 +2347,148 @@
           }, 2000);
           if (clickCount >= 5) {
             clickCount = 0;
-            const u = prompt("اسم المستخدم:");
-            if (u === "admin") {
-              const p = prompt("كلمة المرور:");
-              if (p === "12345") {
-                document
-                  .getElementById("toggle-view-btn")
-                  .classList.remove("hidden");
-                showToast("دخول بصلاحيات مدير");
-              } else showToast("كلمة المرور خاطئة", true);
-            } else if (u === "add") {
-              const p = prompt("كلمة المرور:");
-              if (p === "123") {
-                openContributorPortal();
-                showToast("دخول بصلاحيات متعاون");
-              } else showToast("كلمة المرور خاطئة", true);
-            } else if (u) showToast("المستخدم غير موجود", true);
+            openTeamLoginModal();
           }
         });
+
+      window.openTeamLoginModal = () => {
+        if (currentLoggedRole) {
+          // إذا كان مسجل دخول مسبقاً، افتح له قائمته فوراً
+          document
+            .getElementById("team-nav-dropdown-container")
+            .classList.remove("hidden");
+          showToast("أهلاً بك مجدداً في قائمة فريق العمل ⚡");
+          return;
+        }
+        document.getElementById("team-login-modal").classList.remove("hidden");
+        document.getElementById("login-password-input").focus();
+      };
+
+      window.closeTeamLogin = () => {
+        document.getElementById("team-login-modal").classList.add("hidden");
+      };
+
+      window.onRoleSelectChange = () => {
+        const role = document.getElementById("login-role-select").value;
+        const hint = document.getElementById("login-role-hint");
+        if (role === "admin") {
+          hint.innerText =
+            "المدير لديه كامل الصلاحيات لتعديل وحذف الجوامع واعتماد طلبات المساهمين.";
+        } else {
+          hint.innerText =
+            "المعاون يمكنه إضافة المساجد والمحاضرات ورفع ملفات Excel ليتم اعتمادها.";
+        }
+      };
+
+      window.submitTeamLogin = (e) => {
+        e.preventDefault();
+        const role = document.getElementById("login-role-select").value;
+        const pwd = document.getElementById("login-password-input").value;
+
+        if (role === "admin" && pwd === "12345") {
+          currentLoggedRole = "admin";
+          document.getElementById("logged-role-title").innerText =
+            "المدير العام";
+          document.getElementById("menu-item-admin").classList.remove("hidden");
+          closeTeamLogin();
+          document
+            .getElementById("team-nav-dropdown-container")
+            .classList.remove("hidden");
+          showToast("أهلاً بك يا مدير النظام! تم تفعيل القائمة المنسدلة 🛡️");
+          switchWorkspaceView("admin");
+        } else if (role === "contributor" && pwd === "123") {
+          currentLoggedRole = "contributor";
+          document.getElementById("logged-role-title").innerText =
+            "معاون / مساهم";
+          document.getElementById("menu-item-admin").classList.add("hidden");
+          closeTeamLogin();
+          document
+            .getElementById("team-nav-dropdown-container")
+            .classList.remove("hidden");
+          showToast("أهلاً بك يا مساهم الخير! تم تفعيل القائمة المنسدلة ⚡");
+          openContributorPortal();
+        } else {
+          showToast("كلمة المرور غير صحيحة لهذه الصلاحية!", true);
+        }
+      };
+
+      window.toggleTeamDropdown = (event) => {
+        if (event) event.stopPropagation();
+        const menu = document.getElementById("team-dropdown-menu");
+        menu.classList.toggle("hidden");
+      };
+
+      window.logoutTeam = () => {
+        currentLoggedRole = null;
+        document
+          .getElementById("team-nav-dropdown-container")
+          .classList.add("hidden");
+        switchWorkspaceView("user");
+        showToast("تم تسجيل الخروج بنجاح");
+      };
+
+      // إغلاق القائمة المنسدلة عند النقر في أي مكان فارغ
+      window.addEventListener("click", (e) => {
+        const dropdown = document.getElementById("team-dropdown-menu");
+        const button = document.getElementById("team-nav-dropdown-container");
+        if (
+          dropdown &&
+          !dropdown.classList.contains("hidden") &&
+          !button.contains(e.target)
+        ) {
+          dropdown.classList.add("hidden");
+        }
+      });
+
+      window.switchWorkspaceView = (view) => {
+        if (view === "admin") {
+          document.getElementById("user-view").classList.add("hidden");
+          document.getElementById("admin-view").classList.remove("hidden");
+        } else {
+          document.getElementById("admin-view").classList.add("hidden");
+          document.getElementById("user-view").classList.remove("hidden");
+          setTimeout(() => {
+            if (map) map.invalidateSize();
+          }, 300);
+        }
+      };
 
       function openContributorPortal() {
         document.getElementById("contributor-modal").classList.remove("hidden");
         window.switchContTab("mosque");
       }
+
       window.switchContTab = (tab) => {
         const tm = document.getElementById("cont-tab-mosque"),
-          tl = document.getElementById("cont-tab-lecture");
+          tl = document.getElementById("cont-tab-lecture"),
+          te = document.getElementById("cont-tab-excel");
+
         const sm = document.getElementById("cont-mosque-section"),
-          sl = document.getElementById("cont-lecture-section");
+          sl = document.getElementById("cont-lecture-section"),
+          se = document.getElementById("cont-excel-section");
+
+        [tm, tl, te].forEach((btn) => {
+          btn.className =
+            "flex-1 py-2 font-bold rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors border border-transparent";
+        });
+        [sm, sl, se].forEach((sec) => sec.classList.replace("block", "hidden"));
+
         if (tab === "mosque") {
           tm.className =
             "flex-1 py-2 font-bold rounded-lg bg-emerald-100 text-emerald-800 transition-colors";
-          tl.className =
-            "flex-1 py-2 font-bold rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors";
           sm.classList.replace("hidden", "block");
-          sl.classList.replace("block", "hidden");
-        } else {
+        } else if (tab === "lecture") {
           tl.className =
             "flex-1 py-2 font-bold rounded-lg bg-emerald-100 text-emerald-800 transition-colors";
-          tm.className =
-            "flex-1 py-2 font-bold rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors";
           sl.classList.replace("hidden", "block");
-          sm.classList.replace("block", "hidden");
           window.filterContMosques();
+        } else if (tab === "excel") {
+          te.className =
+            "flex-1 py-2 font-bold rounded-lg bg-blue-100 text-blue-800 transition-colors border border-blue-300";
+          se.classList.replace("hidden", "block");
         }
       };
+
       window.filterContMosques = () => {
         const q = (
           document.getElementById("cont-mosque-search").value || ""
@@ -1602,11 +2503,13 @@
           )
           .join("");
       };
+
       window.selectContMosque = (id, name) => {
         document.getElementById("cont-selected-mosque-id").value = id;
         document.getElementById("cont-mosque-search").value = name;
         document.getElementById("cont-mosque-list").innerHTML = "";
       };
+
       window.submitContributorMosque = async () => {
         const data = {
           name: document.getElementById("cont-mosque-name").value,
@@ -1623,6 +2526,16 @@
         };
         if (!data.name || isNaN(data.lat))
           return showToast("أكمل الحقول الإجبارية", true);
+
+        if (isDuplicateMosque(data.lat, data.lng, data.name)) {
+          if (
+            !confirm(
+              "تنبيه: يوجد مسجد مسجل في نفس هذا الموقع أو يحمل اسماً مشابهاً جداً. هل أنت متأكد من رغبتك في إرسال الطلب؟",
+            )
+          )
+            return;
+        }
+
         await addDoc(pendingCollectionRef, {
           type: "mosque",
           data,
@@ -1631,6 +2544,7 @@
         showToast("تم إرسال الجامع للإدارة للموافقة");
         document.getElementById("contributor-modal").classList.add("hidden");
       };
+
       window.submitContributorLecture = async () => {
         const mosqueId = document.getElementById(
           "cont-selected-mosque-id",
@@ -1682,24 +2596,6 @@
           }
         });
       };
-
-      document
-        .getElementById("toggle-view-btn")
-        .addEventListener("click", () => {
-          const btn = document.getElementById("toggle-view-btn");
-          if (
-            document.getElementById("admin-view").classList.contains("hidden")
-          ) {
-            btn.innerHTML = `<i class="fa-solid fa-users text-xl"></i>`;
-            document.getElementById("user-view").classList.add("hidden");
-            document.getElementById("admin-view").classList.remove("hidden");
-          } else {
-            btn.innerHTML = `<i class="fa-solid fa-shield-halved text-xl"></i>`;
-            document.getElementById("admin-view").classList.add("hidden");
-            document.getElementById("user-view").classList.remove("hidden");
-            setTimeout(() => map.invalidateSize(), 300);
-          }
-        });
 
       window.openEditMosque = (id) => {
         editingMosqueId = id;
@@ -1778,6 +2674,14 @@
             lectures: [],
           };
           if (isNaN(payload.lat)) return showToast("يجب تحديد الموقع", true);
+          if (isDuplicateMosque(payload.lat, payload.lng, payload.name)) {
+            if (
+              !confirm(
+                "تنبيه: يوجد جامع مسجل مسبقاً بنفس الموقع أو الاسم. هل تريد إضافته على أي حال؟",
+              )
+            )
+              return;
+          }
           try {
             await addDoc(mosquesCollectionRef, payload);
             showToast("تمت الإضافة");
@@ -1886,6 +2790,11 @@
         }
       }
 
+      window.adminSelectMosque = (id) => {
+        adminSelectedMosqueId = id;
+        renderAdminLecturesSection();
+      };
+
       document
         .getElementById("add-lecture-form")
         .addEventListener("submit", async (e) => {
@@ -1940,7 +2849,7 @@
             const d = new Date(req.date);
             let content = "";
             if (req.type === "mosque") {
-              content = `<strong>إضافة جامع جديد:</strong> ${req.data.name}<br>
+              content = `<strong>إضافة جامع جديد (وربما محاضراته):</strong> ${req.data.name}<br>
                            <span class="text-sm text-gray-500">الحي: ${req.data.neighborhood || "-"} | الموقع: ${req.data.lat.toFixed(4)}, ${req.data.lng.toFixed(4)}</span>`;
             } else {
               const m = globalMosques.find((x) => x.id === req.mosqueId);
@@ -1968,7 +2877,7 @@
         if (!req) return;
         try {
           if (req.type === "mosque") {
-            await addDoc(mosquesCollectionRef, { ...req.data, lectures: [] });
+            await addDoc(mosquesCollectionRef, { ...req.data });
           } else if (req.type === "lecture") {
             const m = globalMosques.find((x) => x.id === req.mosqueId);
             if (m)
@@ -2041,7 +2950,7 @@
         const startDate = document.getElementById("report-start-date").value;
         const endDate = document.getElementById("report-end-date").value;
 
-        let html = `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>تقرير الأنشطة الدعوية</title><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&family=Amiri:wght@400;700&display=swap" rel="stylesheet"><style>:root{--primary-color:#064e3b;--gold-color:#b45309;}body{font-family:'Cairo',sans-serif;background-color:#f8fafc;color:#1f2937;margin:0;padding:0;}.report-container{max-width:210mm;margin:20px auto;background:#fff;padding:40px;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,0.05);border-top:8px solid var(--primary-color);}.header{text-align:center;border-bottom:2px solid var(--gold-color);padding-bottom:20px;margin-bottom:30px;}.header h1{font-family:'Amiri',serif;color:var(--primary-color);font-size:34px;margin:0 0 10px 0;}.header p{color:#4b5563;font-size:16px;margin:5px 0;}table{width:100%;border-collapse:collapse;margin-top:20px;}th{background-color:var(--primary-color);color:white;padding:15px;text-align:right;font-weight:600;font-size:15px;border:1px solid var(--primary-color);}td{padding:15px;border:1px solid #e2e8f0;font-size:14px;vertical-align:top;}tr:nth-child(even){background-color:#f8fafc;}.mosque-name{font-weight:700;color:var(--primary-color);font-size:16px;}.footer{margin-top:50px;padding-top:20px;border-top:1px solid #e2e8f0;text-align:center;font-size:14px;color:#64748b;}.print-btn-container{text-align:center;margin-bottom:20px;}.print-btn{background-color:var(--primary-color);color:white;border:none;padding:12px 30px;font-size:16px;font-family:'Cairo',sans-serif;border-radius:8px;cursor:pointer;font-weight:bold;transition:all 0.3s ease;}.print-btn:hover{background-color:#047857;}@media print{body{background-color:#fff;}.report-container{box-shadow:none;margin:0;padding:0;max-width:100%;border-top:none;}.print-btn-container{display:none;}*{-webkit-print-color-adjust:exact !important;color-adjust:exact !important;}}</style></head><body><div class="print-btn-container"><button class="print-btn" onclick="window.print()">🖨️ طباعة التقرير الفخم</button></div><div class="report-container"><div class="header"><h1>دليل المحاضرات والجوامع</h1><p>التقرير الرسمي للأنشطة الدعوية والدروس العلمية بمنطقة عسير</p>`;
+        let html = `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>تقرير الأنشطة الدعوية</title><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&family=Amiri:wght@400;700&display=swap" rel="stylesheet"><style>:root{--primary-color:#064e3b;--gold-color:#b45309;}body{font-family:'Cairo',sans-serif;background-color:#f8fafc;color:#1f2937;margin:0;padding:0;}.report-container{max-width:210mm;margin:20px auto;background:#fff;padding:40px;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,0.05);border-top:8px solid var(--primary-color);}.header{text-align:center;border-bottom:2px solid var(--gold-color);padding-bottom:20px;margin-bottom:30px;}.header h1{font-family:'Amiri',serif;color:var(--primary-color);font-size:34px;margin:0 0 10px 0;}.header p{color:#4b5563;font-size:16px;margin:5px 0;}table{width:100%;border-collapse:collapse;margin-top:20px;}th{background-color:var(--primary-color);color:white;padding:15px;text-align:right;font-weight:600;font-size:15px;border:1px solid var(--primary-color);}td{padding:15px;border:1px solid #e2e8f0;font-size:14px;vertical-align:top;}tr:nth-child(even){background-color:#f8fafc;}.mosque-name{font-weight:700;color:var(--primary-color);font-size:16px;}.footer{margin-top:50px;padding-top:20px;border-top:1px solid #e2e8f0;text-align:center;font-size:14px;color:#64748b;}.print-btn-container{text-align:center;margin-bottom:20px;}.print-btn{background-color:var(--primary-color);color:white;border:none;padding:12px 30px;font-size:16px;font-family:'Cairo',sans-serif;border-radius:8px;cursor:pointer;font-weight:bold;transition:all 0.3s ease;}.print-btn:hover{background-color:#047857;}@media print{body{background-color:#fff;}.report-container{box-shadow:none;margin:0;padding:0;max-width:100%;border-top:none;}.print-btn-container{display:none;}*{-webkit-print-color-adjust:exact !important;color-adjust:exact !important;}}</style></head><body><div class="print-btn-container"><button class="print-btn" onclick="window.print()">🖨️ طباعة التقرير الفخم</button></div><div class="report-container"><div class="header"><h1>دليل المحاضرات والجوامع</h1><p>التقرير الرسمي للأنشطة الدعوية والدروس العلمية</p>`;
 
         if (startDate && endDate)
           html += `<p style="font-weight: 600; color: var(--primary-color);">للفترة من: ${startDate} — إلى: ${endDate}</p>`;
